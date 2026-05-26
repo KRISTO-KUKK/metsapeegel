@@ -1,0 +1,39 @@
+ ⨯ Error: Could not find the module "C:\Users\ninja\Desktop\proto\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '235665531'
+}
+ ⨯ Error: Could not find the module "C:\Users\ninja\Desktop\proto\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>)
+    at stringify (<anonymous>) {
+  digest: '3083476863'
+}
+ ⨯ Error: Could not find the module "C:\Users\ninja\Desktop\proto\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>)
+    at stringify (<anonymous>) {
+  digest: '3083476863'
+}
+ ⨯ Error: Could not find the module "C:\Users\ninja\Desktop\proto\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>)
+    at stringify (<anonymous>) {
+  digest: '3083476863'
+}
+ ⨯ Error: Could not find the module "C:\Users\ninja\Desktop\proto\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '235665531'
+}
+ ⨯ Error: Could not find the module "C:\Users\ninja\Desktop\proto\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '235665531'
+}
+ ⨯ [TypeError: Cannot read properties of undefined (reading 'call')] {
+  digest: '3488214751'
+}
+ ⨯ Error: Could not find the module "C:\Users\ninja\Desktop\proto\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '235665531'
+}
+[TypeError: Cannot read properties of undefined (reading 'call')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading 'call')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading 'call')] {
+  page: '/'
+}

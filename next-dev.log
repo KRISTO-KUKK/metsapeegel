@@ -1,0 +1,30 @@
+
+> metsapeegel@0.1.0 dev
+> next dev --port 3000
+
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.149:3000
+
+ ✓ Starting...
+ ✓ Ready in 1670ms
+ ○ Compiling /api/search ...
+ ✓ Compiled /api/search in 12.3s (581 modules)
+ GET /api/search?q=N%C3%A4idis 200 in 12853ms
+ ○ Compiling / ...
+ ✓ Compiled / in 30.7s (1506 modules)
+ GET / 200 in 33170ms
+ ✓ Compiled in 3.1s (547 modules)
+ GET /api/search?q= 200 in 300ms
+ GET /api/search?q=mets 200 in 56ms
+ GET / 200 in 118ms
+ ✓ Compiled in 518ms (1172 modules)
+ GET / 200 in 169ms
+ ✓ Compiled in 229ms (547 modules)
+ GET / 200 in 30ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1103ms (1519 modules)
+ GET / 200 in 570ms
+ GET / 200 in 19ms
+ GET / 200 in 17ms
+ GET / 500 in 3101ms

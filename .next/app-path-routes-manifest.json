@@ -1,0 +1,8 @@
+{
+  "/api/analyze/[areaId]/route": "/api/analyze/[areaId]",
+  "/_not-found/page": "/_not-found",
+  "/api/generate-summary/route": "/api/generate-summary",
+  "/api/search/route": "/api/search",
+  "/api/forest-at/route": "/api/forest-at",
+  "/page": "/"
+}
