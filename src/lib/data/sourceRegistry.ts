@@ -248,6 +248,57 @@ export const areaQueryFilters: AreaQueryFilterDefinition[] = [
     parameters: [],
     caveat:
       "Eraldiste puudumine voib tahendada andmepiiri voi sidumise probleemi, mitte automaatselt seda, et ala pole mets."
+  },
+  {
+    id: "area_larger_than",
+    label: "Suuremad metsaalad",
+    description:
+      "Leiab praeguses kaardivaates ETAK metsaalad, mille pindala on suurem voi vordne kasutaja antud hektaritega.",
+    requiredDatasets: ["etak-forest-wfs"],
+    parameters: [
+      {
+        id: "minAreaHa",
+        label: "Vahim pindala hektarites",
+        type: "number",
+        required: true
+      }
+    ],
+    caveat:
+      "Pindala tuleb valitud ETAK metsaala geomeetriast; see ei pruugi olla kogu kinnistu metsamaa pindala."
+  },
+  {
+    id: "area_smaller_than",
+    label: "Vaiksemad metsaalad",
+    description:
+      "Leiab praeguses kaardivaates ETAK metsaalad, mille pindala on vaiksem voi vordne kasutaja antud hektaritega.",
+    requiredDatasets: ["etak-forest-wfs"],
+    parameters: [
+      {
+        id: "maxAreaHa",
+        label: "Suurim pindala hektarites",
+        type: "number",
+        required: true
+      }
+    ],
+    caveat:
+      "Pindala tuleb valitud ETAK metsaala geomeetriast; vordlus on kaardivaate eelvaliku piires."
+  },
+  {
+    id: "many_registry_stands",
+    label: "Paljude eraldistega alad",
+    description:
+      "Leiab praeguses kaardivaates metsaalad, mille seotud Metsaregistri eraldiste arv on suurem voi vordne kasutaja antud arvuga.",
+    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-rest"],
+    parameters: [
+      {
+        id: "minStands",
+        label: "Vahim eraldiste arv",
+        type: "number",
+        required: true
+      }
+    ],
+    caveat:
+      "Eraldiste arv kirjeldab registri jaotust, mitte automaatselt raiet voi metsa kvaliteeti."
   }
 ];
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { bbox } from "@turf/turf";
+import { bbox, pointOnFeature } from "@turf/turf";
 import { Layers, LocateFixed, RotateCcw } from "lucide-react";
 import maplibregl, { GeoJSONSource } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
@@ -150,6 +150,44 @@ function setLayerVisibility(
       map.setLayoutProperty(layerId, "visibility", visibility);
     }
   }
+}
+
+function queryResultPoints(data: GeoCollection): GeoCollection {
+  const features: Feature<Geometry, Record<string, unknown>>[] = [];
+
+  for (const feature of data.features) {
+    try {
+      const point = pointOnFeature(feature);
+      features.push({
+        type: "Feature",
+        properties: {
+          ...feature.properties,
+          sourceAreaId: feature.properties.areaId
+        },
+        geometry: point.geometry
+      });
+    } catch {
+      // Ignore invalid geometries in the visual helper layer.
+    }
+  }
+
+  return {
+    type: "FeatureCollection",
+    features
+  };
+}
+
+function setForestPreviewVisibility(map: maplibregl.Map, isVisible: boolean) {
+  setLayerVisibility(
+    map,
+    [
+      "maaamet-forest-cover",
+      "maaamet-forest-detail",
+      "etak-forest-preview-fill",
+      "etak-forest-preview-line"
+    ],
+    isVisible
+  );
 }
 
 function escapeHtml(value: unknown) {
@@ -414,6 +452,10 @@ export function MapView({
         type: "geojson",
         data: emptyCollection
       });
+      map.addSource("query-result-points", {
+        type: "geojson",
+        data: emptyCollection
+      });
 
       map.addLayer({
         id: "maaamet-base-map",
@@ -611,8 +653,8 @@ export function MapView({
         type: "fill",
         source: "query-results",
         paint: {
-          "fill-color": "#facc15",
-          "fill-opacity": 0.42
+          "fill-color": "#2563eb",
+          "fill-opacity": 0.38
         }
       });
 
@@ -621,17 +663,47 @@ export function MapView({
         type: "line",
         source: "query-results",
         paint: {
-          "line-color": "#854d0e",
+          "line-color": "#1d4ed8",
           "line-width": [
             "interpolate",
             ["linear"],
             ["zoom"],
             7,
-            1.2,
+            1.4,
             11,
-            2.8
+            3.1
           ],
-          "line-opacity": 0.9
+          "line-opacity": 0.94
+        }
+      });
+
+      map.addLayer({
+        id: "query-result-points",
+        type: "circle",
+        source: "query-result-points",
+        maxzoom: 8.4,
+        paint: {
+          "circle-color": "#2563eb",
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            5,
+            8.5,
+            8,
+            5.5
+          ],
+          "circle-opacity": 0.86,
+          "circle-stroke-color": "#dbeafe",
+          "circle-stroke-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            5,
+            2,
+            8,
+            1.4
+          ]
         }
       });
 
@@ -745,6 +817,32 @@ export function MapView({
       onSelectForestAt({ lng: event.lngLat.lng, lat: event.lngLat.lat });
     });
 
+    map.on("mousemove", "query-result-points", (event) => {
+      const feature = event.features?.[0];
+      if (!feature) {
+        return;
+      }
+
+      map.getCanvas().style.cursor = "pointer";
+      tooltip
+        .setLngLat(event.lngLat)
+        .setHTML(
+          `<strong>${escapeHtml(feature.properties?.label ?? "Filtri tulemus")}</strong><br/>${escapeHtml(
+            feature.properties?.matchReason ?? "Vastab kaardifiltrile."
+          )}`
+        )
+        .addTo(map);
+    });
+
+    map.on("mouseleave", "query-result-points", () => {
+      map.getCanvas().style.cursor = "grab";
+      tooltip.remove();
+    });
+
+    map.on("click", "query-result-points", (event) => {
+      onSelectForestAt({ lng: event.lngLat.lng, lat: event.lngLat.lat });
+    });
+
     return () => {
       if (visibleForestTimer) {
         window.clearTimeout(visibleForestTimer);
@@ -847,6 +945,15 @@ export function MapView({
       if (action.ownershipForm) {
         params.set("ownershipForm", action.ownershipForm);
       }
+      if (action.minAreaHa) {
+        params.set("minAreaHa", String(action.minAreaHa));
+      }
+      if (action.maxAreaHa) {
+        params.set("maxAreaHa", String(action.maxAreaHa));
+      }
+      if (action.minStands) {
+        params.set("minStands", String(action.minStands));
+      }
 
       setQueryOverlay({
         label: action.label,
@@ -855,6 +962,9 @@ export function MapView({
         inspectedCount: 0,
         message: "Kontrollin nähtavaid metsaalasid ametlike allikatega..."
       });
+      setForestPreviewVisibility(map, false);
+      setGeojsonSource(map, "query-results", emptyCollection);
+      setGeojsonSource(map, "query-result-points", emptyCollection);
 
       try {
         const response = await fetch(`/api/area-query?${params.toString()}`);
@@ -864,6 +974,7 @@ export function MapView({
 
         const result = (await response.json()) as AreaQueryResponse;
         setGeojsonSource(map, "query-results", result);
+        setGeojsonSource(map, "query-result-points", queryResultPoints(result));
         setQueryOverlay({
           label: result.query.label,
           status: "ready",
@@ -875,6 +986,9 @@ export function MapView({
               : "Selles kaardivaates vastavaid alasid ei leitud."
         });
       } catch (cause) {
+        setForestPreviewVisibility(map, true);
+        setGeojsonSource(map, "query-results", emptyCollection);
+        setGeojsonSource(map, "query-result-points", emptyCollection);
         setQueryOverlay({
           label: action.label,
           status: "error",
@@ -1009,6 +1123,8 @@ export function MapView({
                   const map = mapRef.current;
                   if (map) {
                     setGeojsonSource(map, "query-results", emptyCollection);
+                    setGeojsonSource(map, "query-result-points", emptyCollection);
+                    setForestPreviewVisibility(map, true);
                   }
                   setQueryOverlay(null);
                 }}
@@ -1061,6 +1177,9 @@ export function MapView({
             </div>
             <div className="flex items-center gap-1.5">
               <span className="size-2 rounded-sm bg-blue-400" /> kaitsekattuvus
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="size-2 rounded-sm border border-blue-700 bg-blue-500" /> AI filtri tulemus
             </div>
             <div className="flex items-center gap-1.5">
               <span className="size-2 rounded-sm border border-slate-700 bg-white" /> katastripiir

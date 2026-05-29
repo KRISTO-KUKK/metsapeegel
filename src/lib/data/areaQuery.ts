@@ -26,6 +26,9 @@ type RunAreaQueryInput = {
   year?: number;
   beforeYear?: number;
   ownershipForm?: string;
+  minAreaHa?: number;
+  maxAreaHa?: number;
+  minStands?: number;
   limit?: number;
 };
 
@@ -62,6 +65,26 @@ function resultLabel(area: Area) {
   return area.etakId ? `ETAK mets ${area.etakId}` : area.name;
 }
 
+function checkedSourcesForFilter(filterId: AreaQueryFilterId) {
+  if (filterId === "no_protection_overlap" || filterId === "protection_overlap") {
+    return ["ETAK WFS", "EELIS WFS"];
+  }
+
+  if (filterId === "ownership_form") {
+    return ["ETAK WFS", "Kataster WFS"];
+  }
+
+  if (filterId === "has_wood_raw_material" || filterId === "has_carbon_storage") {
+    return ["ETAK WFS", "ELME WFS"];
+  }
+
+  if (filterId === "area_larger_than" || filterId === "area_smaller_than") {
+    return ["ETAK WFS"];
+  }
+
+  return ["ETAK WFS", "Kataster WFS", "Metsaregister REST"];
+}
+
 function toQueryFeature(
   result: CandidateResult,
   filterId: AreaQueryFilterId,
@@ -82,14 +105,7 @@ function toQueryFeature(
       etakType: result.area.etakType,
       cadastralId: result.area.cadastralId,
       ownershipForm: result.area.ownershipForm,
-      checkedSources:
-        filterId === "no_protection_overlap" || filterId === "protection_overlap"
-          ? ["ETAK WFS", "EELIS WFS"]
-          : filterId === "ownership_form"
-            ? ["ETAK WFS", "Kataster WFS"]
-            : filterId === "has_wood_raw_material" || filterId === "has_carbon_storage"
-              ? ["ETAK WFS", "ELME WFS"]
-          : ["ETAK WFS", "Kataster WFS", "Metsaregister REST"],
+      checkedSources: checkedSourcesForFilter(filterId),
       ...extra
     }
   };
@@ -318,12 +334,82 @@ async function matchesNoRegistryStands(candidate: CandidateResult) {
   );
 }
 
+function matchesAreaLargerThan(candidate: CandidateResult, minAreaHa: number) {
+  if (candidate.area.areaHa < minAreaHa) {
+    return null;
+  }
+
+  return toQueryFeature(
+    candidate,
+    "area_larger_than",
+    `ETAK metsaala pindala on ${candidate.area.areaHa} ha ehk vähemalt ${minAreaHa} ha.`,
+    {
+      areaHa: candidate.area.areaHa
+    }
+  );
+}
+
+function matchesAreaSmallerThan(candidate: CandidateResult, maxAreaHa: number) {
+  if (candidate.area.areaHa > maxAreaHa) {
+    return null;
+  }
+
+  return toQueryFeature(
+    candidate,
+    "area_smaller_than",
+    `ETAK metsaala pindala on ${candidate.area.areaHa} ha ehk kuni ${maxAreaHa} ha.`,
+    {
+      areaHa: candidate.area.areaHa
+    }
+  );
+}
+
+async function matchesManyRegistryStands(
+  candidate: CandidateResult,
+  minStands: number
+) {
+  if (!candidate.area.cadastralId) {
+    return null;
+  }
+
+  const stands = await realDataProvider
+    .getForestStands(candidate.area.geometry, candidate.area.id, candidate.area)
+    .catch(() => []);
+
+  if (stands.length < minStands) {
+    return null;
+  }
+
+  const averageStandAreaHa =
+    candidate.area.areaHa > 0
+      ? Math.round((candidate.area.areaHa / stands.length) * 100) / 100
+      : undefined;
+  const standsPer100Ha =
+    candidate.area.areaHa > 0
+      ? Math.round(((stands.length / candidate.area.areaHa) * 100) * 10) / 10
+      : undefined;
+
+  return toQueryFeature(
+    { ...candidate, stands },
+    "many_registry_stands",
+    `Metsaregister tagastas ${stands.length} eraldist, mis on vähemalt ${minStands}.`,
+    {
+      registryStandsCount: stands.length,
+      averageStandAreaHa,
+      standsPer100Ha
+    }
+  );
+}
+
 export async function runAreaQuery({
   bbox,
   filterId,
   year,
   beforeYear,
   ownershipForm,
+  minAreaHa,
+  maxAreaHa,
+  minStands,
   limit = 32
 }: RunAreaQueryInput): Promise<AreaQueryResponse> {
   const filter = getAreaQueryFilter(filterId);
@@ -339,6 +425,15 @@ export async function runAreaQuery({
   }
   if (filterId === "ownership_form" && !ownershipForm) {
     throw new Error("ownership_form filter requires ownershipForm.");
+  }
+  if (filterId === "area_larger_than" && !minAreaHa) {
+    throw new Error("area_larger_than filter requires minAreaHa.");
+  }
+  if (filterId === "area_smaller_than" && !maxAreaHa) {
+    throw new Error("area_smaller_than filter requires maxAreaHa.");
+  }
+  if (filterId === "many_registry_stands" && !minStands) {
+    throw new Error("many_registry_stands filter requires minStands.");
   }
 
   const safeLimit = Math.max(8, Math.min(maxCandidates, Math.round(limit)));
@@ -371,6 +466,15 @@ export async function runAreaQuery({
     if (filterId === "no_registry_stands") {
       return matchesNoRegistryStands(candidate);
     }
+    if (filterId === "area_larger_than") {
+      return matchesAreaLargerThan(candidate, minAreaHa ?? 0);
+    }
+    if (filterId === "area_smaller_than") {
+      return matchesAreaSmallerThan(candidate, maxAreaHa ?? 0);
+    }
+    if (filterId === "many_registry_stands") {
+      return matchesManyRegistryStands(candidate, minStands ?? 0);
+    }
 
     return null;
   });
@@ -391,7 +495,10 @@ export async function runAreaQuery({
       scope: "current_map_view",
       year,
       beforeYear,
-      ownershipForm
+      ownershipForm,
+      minAreaHa,
+      maxAreaHa,
+      minStands
     },
     datasets: datasetsForFilter(filterId),
     filter,

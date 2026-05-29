@@ -120,15 +120,14 @@ export default function Home() {
       />
       <div className="map-vignette" />
 
-      <header className="pointer-events-none fixed left-0 right-0 top-0 z-30 px-4 pt-4 sm:px-6">
-        <div className="pointer-events-auto mx-auto flex max-w-6xl flex-col gap-3 rounded-lg glass-panel p-3 sm:flex-row sm:items-center sm:gap-5">
-          <div className="min-w-0 sm:w-72">
-            <div className="text-xl font-semibold text-[var(--forest-950)]">
-              Metsatark
-            </div>
-            <div className="truncate text-sm text-[var(--muted)]">
-              AI tõlgendab ametlikke metsaandmeid.
-            </div>
+      <header className="pointer-events-none fixed left-0 right-0 top-0 z-30 px-4 pt-3 sm:px-6">
+        <div className="header-shell pointer-events-auto mx-auto flex w-full max-w-4xl flex-col gap-2 rounded-lg px-3 py-2 sm:w-fit sm:max-w-[calc(100vw-3rem)] sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex min-w-0 shrink-0 items-center">
+            <img
+              alt="Metsatark"
+              className="h-10 w-auto max-w-[220px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.32)] sm:h-11 sm:max-w-[255px]"
+              src="/metsatark-logo.png"
+            />
           </div>
           <SearchBar onSelectArea={selectArea} />
         </div>

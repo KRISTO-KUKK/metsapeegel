@@ -8,7 +8,8 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
-    "inspect:area": "node scripts/inspect-area.mjs"
+    "inspect:area": "node scripts/inspect-area.mjs",
+    "inspect:ai-tools": "node scripts/inspect-ai-tools.mjs"
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",

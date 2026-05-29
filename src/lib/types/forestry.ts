@@ -577,7 +577,10 @@ export type AreaQueryFilterId =
   | "no_forest_notice"
   | "has_wood_raw_material"
   | "has_carbon_storage"
-  | "no_registry_stands";
+  | "no_registry_stands"
+  | "area_larger_than"
+  | "area_smaller_than"
+  | "many_registry_stands";
 
 export type AreaQueryFilterDefinition = {
   id: AreaQueryFilterId;
@@ -585,9 +588,15 @@ export type AreaQueryFilterDefinition = {
   description: string;
   requiredDatasets: string[];
   parameters: Array<{
-    id: "year" | "beforeYear" | "ownershipForm";
+    id:
+      | "year"
+      | "beforeYear"
+      | "ownershipForm"
+      | "minAreaHa"
+      | "maxAreaHa"
+      | "minStands";
     label: string;
-    type: "year" | "ownership";
+    type: "year" | "ownership" | "number";
     required: boolean;
   }>;
   caveat: string;
@@ -600,6 +609,9 @@ export type AreaMapAction = {
   year?: number;
   beforeYear?: number;
   ownershipForm?: string;
+  minAreaHa?: number;
+  maxAreaHa?: number;
+  minStands?: number;
   scope: "current_map_view";
   explanation: string;
 };
@@ -617,6 +629,8 @@ export type AreaQueryFeatureProperties = {
   registryStandsCount?: number;
   forestNoticesCount?: number;
   ecosystemOverlapCount?: number;
+  averageStandAreaHa?: number;
+  standsPer100Ha?: number;
   checkedSources: string[];
 };
 
@@ -640,6 +654,9 @@ export type AreaQueryResponse = FeatureCollection<
     year?: number;
     beforeYear?: number;
     ownershipForm?: string;
+    minAreaHa?: number;
+    maxAreaHa?: number;
+    minStands?: number;
   };
   datasets: QueryableDataset[];
   filter: AreaQueryFilterDefinition;

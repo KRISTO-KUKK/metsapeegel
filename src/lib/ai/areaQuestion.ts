@@ -1,6 +1,7 @@
 import type {
   AnalysisResult,
   AreaAnswerEvidence,
+  AreaQueryFilterId,
   AreaMapAction,
   AreaQuestionAnswer,
   AnswerVerdict,
@@ -8,6 +9,10 @@ import type {
   NormalizedEvidenceItem,
   NormalizedSelectedAreaEvidence
 } from "@/lib/types/forestry";
+import {
+  areaQueryFilters,
+  getAreaQueryFilter
+} from "@/lib/data/sourceRegistry";
 
 type AreaQuestionInput = {
   analysis: AnalysisResult;
@@ -28,6 +33,7 @@ type AiAnswerPayload = {
   cannotSay?: string[];
   missingInfo?: string[];
   evidenceIds?: string[];
+  mapAction?: Partial<AreaMapAction> | null;
   followUps?: string[];
   mapHints?: string[];
 };
@@ -82,12 +88,124 @@ const sourceShortLabels: Record<string, string> = {
   "smi-kese": "SMI/KESE"
 };
 
+type ConceptGlossaryItem = {
+  id: string;
+  terms: string[];
+  shortDefinition: string;
+  whyItMatters: string;
+  selectedAreaBoundary: string;
+};
+
+const conceptGlossary: ConceptGlossaryItem[] = [
+  {
+    id: "cadastre",
+    terms: ["kataster", "katastriüksus", "katastritunnus", "kinnistu"],
+    shortDefinition:
+      "Kataster on maaüksuste register: seal on maatüki piir, tunnus, aadress, sihtotstarve ja avalik omandivormi info.",
+    whyItMatters:
+      "Metsatark kasutab katastrit selleks, et siduda klikitud metsaala Metsaregistri päringutega ja näidata omandivormi ilma omaniku isikuandmeid avamata.",
+    selectedAreaBoundary:
+      "Katastriüksus ei tähenda automaatselt, et kogu maaüksus on mets või et kogu mets kuulub samasse metsamajanduslikku üksusesse."
+  },
+  {
+    id: "etak",
+    terms: ["etak", "etak metsaala", "topograafiline metsaala"],
+    shortDefinition:
+      "ETAK on Eesti topograafiline andmekogu. ETAK metsaala on kaardil olev metsaobjekt ehk valitav geomeetria.",
+    whyItMatters:
+      "See annab Metsatargale ruumilise ankru: mille kohta päringud ja kattuvused arvutatakse.",
+    selectedAreaBoundary:
+      "ETAK kirjeldab kaardiobjekti, mitte kogu raiete, kaitse ega inventuuri seisu."
+  },
+  {
+    id: "forest_notice",
+    terms: ["metsateatis", "teatis", "raieteatis"],
+    shortDefinition:
+      "Metsateatis on ametlik registrifakt kavandatud, menetletud või registreeritud metsatöö kohta.",
+    whyItMatters:
+      "See on oluline tegevuse signaal, eriti kui küsitakse raie või kahjustuse kohta.",
+    selectedAreaBoundary:
+      "Metsateatis üksi ei tõenda, et töö tegelikult toimus; selleks on vaja muutusetõendit, näiteks kaugseire või LiDAR kihti."
+  },
+  {
+    id: "forest_stand",
+    terms: ["eraldis", "eraldised", "metsaregistri eraldis"],
+    shortDefinition:
+      "Eraldis on Metsaregistris kirjeldatud metsaosa, millele antakse inventuuriandmed nagu puuliik, arenguklass ja inventuuriaasta.",
+    whyItMatters:
+      "Eraldiste arv ja vanus aitavad aru saada, kui detailne või ajakohane registrikirjeldus on.",
+    selectedAreaBoundary:
+      "Eraldiste arv ei tõenda raiet ega metsa head või halba seisundit; see on registri jaotuse info."
+  },
+  {
+    id: "eelis",
+    terms: ["eelis", "kaitsekattuvus", "natura", "vep", "vääriselupaik", "elupaigatüüp"],
+    shortDefinition:
+      "EELIS koondab looduskaitse ja keskkonnapiirangutega seotud ruumiandmeid, näiteks kaitsealad, Natura alad, VEP-id ja elupaigad.",
+    whyItMatters:
+      "Kui valitud metsaala kattub EELIS infoga, peab tõlgendus olema ettevaatlikum ja kontekst peab olema nähtav.",
+    selectedAreaBoundary:
+      "Kattuvus ei ole automaatselt lõplik õiguslik otsus, kas konkreetne tegevus on lubatud või keelatud."
+  },
+  {
+    id: "elme",
+    terms: ["elme", "looduse hüved", "puidutooraine", "süsinik", "ökosüsteem"],
+    shortDefinition:
+      "ELME kihid annavad looduse hüvede taustainfot, näiteks puidutooraine ja süsiniku hinnanguid.",
+    whyItMatters:
+      "Need aitavad näha majanduslikku ja ökosüsteemset konteksti, mida lihtne registrivaade ei näita.",
+    selectedAreaBoundary:
+      "ELME ei ole raietõend, õiguslik otsus ega soovitus raiuda või raiumata jätta."
+  },
+  {
+    id: "lidar_change",
+    terms: ["lidar", "kaugseire", "metsamuutus", "muutusetõend", "muutuse tõend"],
+    shortDefinition:
+      "Muutusetõend tähendab eraldi ruumiandmestikku, mis viitab tegelikule muutusele maastikul, näiteks kõrguse või taimkatte muutusele.",
+    whyItMatters:
+      "Raie tegeliku toimumise järeldus vajab just seda tüüpi tõendit koos registrikontekstiga.",
+    selectedAreaBoundary:
+      "Kui muutusetõend pole ühendatud, peab AI ütlema, et toimunud raiet ei saa kinnitada."
+  }
+];
+
 function normalizeQuestion(question: string) {
   return question.trim().toLocaleLowerCase("et");
 }
 
 function includesAny(value: string, terms: string[]) {
   return terms.some((term) => value.includes(term));
+}
+
+function asksConceptualQuestion(question: string) {
+  const normalized = normalizeQuestion(question);
+  return includesAny(normalized, [
+    "mis on",
+    "mis asi",
+    "mida tähendab",
+    "mida tahendab",
+    "selgita mõistet",
+    "selgita moistet",
+    "defineeri",
+    "üldse",
+    "uldse",
+    "kuidas aru saada"
+  ]);
+}
+
+function conceptForQuestion(question: string) {
+  const normalized = normalizeQuestion(question);
+  return conceptGlossary.find((concept) =>
+    concept.terms.some((term) => normalized.includes(term))
+  );
+}
+
+function roundPositiveNumber(value: number | undefined) {
+  if (value === undefined || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+
+  return Math.round(value * 100) / 100;
 }
 
 function detectedIntent(question: string) {
@@ -265,7 +383,12 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
     "margi",
     "kaardil",
     "kus on",
-    "kus pole"
+    "kus pole",
+    "suuremad",
+    "väiksemad",
+    "vaiksemad",
+    "vähemalt",
+    "vahemalt"
   ]);
 
   if (!asksForMapSet) {
@@ -416,6 +539,58 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
       scope: "current_map_view",
       explanation:
         "Filtreerin praeguses kaardivaates metsaalad, mille seotud katastri kohta Metsaregister ei tagasta eraldisi."
+    };
+  }
+
+  const areaNumber =
+    normalized.match(/(?:üle|ule|suurem kui|vähemalt|vahemalt)[^\d]*(\d+(?:[,.]\d+)?)\s*(?:ha|hektar)/)?.[1] ??
+    normalized.match(/(\d+(?:[,.]\d+)?)\s*(?:ha|hektar)[^\n.]{0,40}(?:üle|ule|suurem|vähemalt|vahemalt)/)?.[1];
+  if (areaNumber) {
+    const minAreaHa = roundPositiveNumber(Number(areaNumber.replace(",", ".")));
+    if (minAreaHa) {
+      return {
+        type: "highlight_area_query",
+        filterId: "area_larger_than",
+        label: `Vähemalt ${minAreaHa} ha metsaalad`,
+        minAreaHa,
+        scope: "current_map_view",
+        explanation:
+          "Filtreerin praeguses kaardivaates ETAK metsaalad, mille pindala on vähemalt küsitud hektarite arv."
+      };
+    }
+  }
+
+  const maxAreaNumber =
+    normalized.match(/(?:alla|väiksem kui|vaiksem kui|kuni)[^\d]*(\d+(?:[,.]\d+)?)\s*(?:ha|hektar)/)?.[1] ??
+    normalized.match(/(\d+(?:[,.]\d+)?)\s*(?:ha|hektar)[^\n.]{0,40}(?:alla|väiksem|vaiksem|kuni)/)?.[1];
+  if (maxAreaNumber) {
+    const maxAreaHa = roundPositiveNumber(Number(maxAreaNumber.replace(",", ".")));
+    if (maxAreaHa) {
+      return {
+        type: "highlight_area_query",
+        filterId: "area_smaller_than",
+        label: `Kuni ${maxAreaHa} ha metsaalad`,
+        maxAreaHa,
+        scope: "current_map_view",
+        explanation:
+          "Filtreerin praeguses kaardivaates ETAK metsaalad, mille pindala on kuni küsitud hektarite arv."
+      };
+    }
+  }
+
+  const minStands =
+    normalized.match(/(?:vähemalt|vahemalt|üle|ule|rohkem kui)[^\d]*(\d+)[^\n.]{0,35}(?:eraldis|eraldist)/)?.[1] ??
+    normalized.match(/(?:eraldis|eraldist)[^\n.]{0,35}(?:vähemalt|vahemalt|üle|ule|rohkem kui)[^\d]*(\d+)/)?.[1];
+  if (minStands) {
+    const minStandsValue = Math.max(1, Math.round(Number(minStands)));
+    return {
+      type: "highlight_area_query",
+      filterId: "many_registry_stands",
+      label: `Vähemalt ${minStandsValue} eraldisega alad`,
+      minStands: minStandsValue,
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille seotud Metsaregistri eraldiste arv on vähemalt küsitud arv."
     };
   }
 
@@ -719,6 +894,37 @@ function interpretiveSummaryAnswer(input: AreaQuestionInput): AreaQuestionAnswer
   };
 }
 
+function conceptualAnswer(
+  input: AreaQuestionInput,
+  concept: ConceptGlossaryItem
+): AreaQuestionAnswer {
+  const { analysis, question } = input;
+  const normalized = analysis.normalizedEvidence;
+
+  return {
+    mode: "template",
+    status: "ready",
+    provider: "deterministic-concept-glossary",
+    question,
+    verdict: "supported",
+    verdictLabel: verdictLabels.supported,
+    confidence: normalized.dataCompleteness.score,
+    shortAnswer: concept.shortDefinition,
+    explanation: `${concept.whyItMatters}\n${concept.selectedAreaBoundary}`,
+    canSay: [],
+    cannotSay: [],
+    evidence: evidenceFromAnalysis(analysis),
+    evidenceIds: [],
+    mapHints: [],
+    followUps: [
+      "Kuidas see valitud ala puhul välja paistab?",
+      "Millised andmed selle mõistega seotud on?",
+      "Mis piirangud selle allikal on?"
+    ],
+    sources: analysis.sources
+  };
+}
+
 function factsFromQuickAnswer(normalized: NormalizedSelectedAreaEvidence) {
   return normalized.quickAnswer.slice(0, 5);
 }
@@ -871,6 +1077,8 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
   const hasProtection = normalized.protectionSummary.length > 0;
   const focus = questionFocusForAnalysis(analysis, question);
   const mapAction = mapActionForQuestionV2(question) ?? mapActionForQuestion(question);
+  const concept =
+    asksConceptualQuestion(question) && !focus ? conceptForQuestion(question) : null;
 
   let verdict: AnswerVerdict = "supported";
   let shortAnswer =
@@ -881,7 +1089,9 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
   let cannotSay = limitsFromNormalized(normalized);
   let evidenceIds = defaultEvidenceIds(normalized);
 
-  if (mapAction) {
+  if (concept && !mapAction) {
+    return conceptualAnswer(input, concept);
+  } else if (mapAction) {
     verdict = "partial";
     shortAnswer = `Saan selle kaardil esile tõsta praeguse vaate ulatuses: ${mapAction.label}.`;
     explanation = [
@@ -899,9 +1109,19 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
     ];
     evidenceIds = evidenceById(
       normalized,
-      mapAction.filterId === "inventory_year"
+      mapAction.filterId === "inventory_year" ||
+        mapAction.filterId === "inventory_before_year" ||
+        mapAction.filterId === "many_registry_stands"
         ? ["registry-stands"]
-        : ["protection-summary"]
+        : mapAction.filterId === "ownership_form"
+          ? ["cadastre-context", "area-base"]
+          : mapAction.filterId === "has_wood_raw_material" ||
+              mapAction.filterId === "has_carbon_storage"
+            ? ["elme-context"]
+            : mapAction.filterId === "area_larger_than" ||
+                mapAction.filterId === "area_smaller_than"
+              ? ["area-base"]
+              : ["protection-summary"]
     );
   } else if (focus) {
     verdict = "supported";
@@ -1200,6 +1420,16 @@ function compactAnalysisForAi(analysis: AnalysisResult, question: string) {
           priority: "Vasta kasutaja täpsele küsimusele võimalikult otse.",
           avoid: "Ära lisa standardset kontrollnimekirja."
         },
+    conceptGlossary,
+    availableMapTools: areaQueryFilters.map((filter) => ({
+      id: filter.id,
+      label: filter.label,
+      description: filter.description,
+      parameters: filter.parameters,
+      requiredDatasets: filter.requiredDatasets,
+      caveat: filter.caveat
+    })),
+    deterministicMapAction: mapActionForQuestionV2(question) ?? mapActionForQuestion(question) ?? null,
     questionFocus: questionFocusForAnalysis(analysis, question),
     interpretationSignals: interpretationSignalsForAnalysis(analysis),
     interpretation: normalized.interpretation,
@@ -1350,10 +1580,105 @@ function requestedProvider(): "template" | "openai" | "ollama" {
   return "template";
 }
 
+function isKnownFilterId(value: unknown): value is AreaQueryFilterId {
+  return (
+    typeof value === "string" &&
+    Boolean(getAreaQueryFilter(value as AreaQueryFilterId))
+  );
+}
+
+function cleanMapAction(
+  value: Partial<AreaMapAction> | null | undefined,
+  fallback?: AreaMapAction
+): AreaMapAction | undefined {
+  const candidate = value ?? fallback;
+  if (!candidate || candidate.type !== "highlight_area_query") {
+    return fallback;
+  }
+
+  const filterId = candidate.filterId;
+  if (!isKnownFilterId(filterId)) {
+    return fallback;
+  }
+
+  const filter = getAreaQueryFilter(filterId);
+  if (!filter) {
+    return fallback;
+  }
+
+  const action: AreaMapAction = {
+    type: "highlight_area_query",
+    filterId,
+    label:
+      typeof candidate.label === "string" && candidate.label.trim()
+        ? candidate.label.trim().slice(0, 90)
+        : filter.label,
+    scope: "current_map_view",
+    explanation:
+      typeof candidate.explanation === "string" && candidate.explanation.trim()
+        ? candidate.explanation.trim().slice(0, 350)
+        : filter.description
+  };
+
+  const year = roundPositiveNumber(
+    typeof candidate.year === "number" ? candidate.year : undefined
+  );
+  const beforeYear = roundPositiveNumber(
+    typeof candidate.beforeYear === "number" ? candidate.beforeYear : undefined
+  );
+  const minAreaHa = roundPositiveNumber(
+    typeof candidate.minAreaHa === "number" ? candidate.minAreaHa : undefined
+  );
+  const maxAreaHa = roundPositiveNumber(
+    typeof candidate.maxAreaHa === "number" ? candidate.maxAreaHa : undefined
+  );
+  const minStands =
+    typeof candidate.minStands === "number" && Number.isFinite(candidate.minStands)
+      ? Math.max(1, Math.round(candidate.minStands))
+      : undefined;
+
+  if (year) action.year = Math.round(year);
+  if (beforeYear) action.beforeYear = Math.round(beforeYear);
+  if (minAreaHa) action.minAreaHa = minAreaHa;
+  if (maxAreaHa) action.maxAreaHa = maxAreaHa;
+  if (minStands) action.minStands = minStands;
+
+  if (
+    typeof candidate.ownershipForm === "string" &&
+    candidate.ownershipForm.trim().length > 0
+  ) {
+    action.ownershipForm = candidate.ownershipForm.trim().slice(0, 80);
+  }
+
+  if (action.filterId === "inventory_year" && !action.year) return fallback;
+  if (action.filterId === "inventory_before_year" && !action.beforeYear) {
+    return fallback;
+  }
+  if (action.filterId === "ownership_form" && !action.ownershipForm) {
+    return fallback;
+  }
+  if (action.filterId === "area_larger_than" && !action.minAreaHa) {
+    return fallback;
+  }
+  if (action.filterId === "area_smaller_than" && !action.maxAreaHa) {
+    return fallback;
+  }
+  if (action.filterId === "many_registry_stands" && !action.minStands) {
+    return fallback;
+  }
+
+  return action;
+}
+
 const conversationalAnswerInstructions = [
   "Sa oled Metsatark, Eesti ametlike metsaandmete peale ehitatud praktiline andmeanalüütik.",
-  "Vasta ainult sisendis olevate väljade selectedAreaData, queryableFacts, sourceDetails ja normalizedEvidence põhjal.",
-  "Ära kasuta internetti, üldteadmisi ega oletusi. Kui vastust andmepakis pole, ütle seda.",
+  "Valitud ala puudutavad faktid peavad tulema ainult sisendis olevatest väljadest selectedAreaData, queryableFacts, sourceDetails ja normalizedEvidence.",
+  "Ära kasuta internetti ega jooksvaid välisandmeid.",
+  "Kui kasutaja küsib üldist metsanduse, andmeallika või kaarditermini tähendust, võid anda lihtsa üldise selgituse oma mudeliteadmiste põhjal. Erista see selgelt valitud ala kohta tõendatud faktidest.",
+  "Kui kasutaja küsib valitud ala kohta ja vastust andmepakis pole, ütle seda otse.",
+  "Kui kasutaja küsib mõiste tähendust, kasuta esmalt dataPackage.conceptGlossary sõnastikku ja lisa valitud ala fakte ainult siis, kui neid küsitakse.",
+  "Kui kasutaja palub kaardil alasid leida, valida, näidata, filtreerida või esile tõsta, vali sobiv tööriist dataPackage.availableMapTools nimekirjast ning tagasta mapAction. Kui sobivat tööriista ei ole, ütle seda ausalt.",
+  "Kaarditööriist töötab praeguse kaardivaate ulatuses. Ära luba üle-Eestilist täielikkust, kui tööriista scope seda ei anna.",
   "Järgi dataPackage.answerStyle juhist: see ütleb, kas vaja on otsest vastust või tõlgendavat kokkuvõtet.",
   "Ära käsitle iga kasutaja küsimust väite tõesuse kontrollina. Vasta täpselt sellele, mida küsiti.",
   "Ära alusta vaikimisi pindalast, katastrist ega omandist, kui kasutaja ei küsi neid. Kokkuvõtte või 'mis siin toimunud on' küsimuses alusta tegevuse tõenditest, muutusetõendist, teatistest, eraldiste mustrist ja andmelünkadest.",
@@ -1366,8 +1691,9 @@ const conversationalAnswerInstructions = [
   "Kui kasutaja küsib ELME, looduse hüvede, puidutooraine, süsiniku või biomassiga seotud asja, kasuta ainult queryableFacts.ecosystemContext ja sourceDetails.elme; ära vasta EELIS kaitsekattuvuste arvuga.",
   "Kui kasutaja küsib kaitse/Natura/VEP/elupaiga kohta, kasuta EELIS fakte; ära vasta ELME arvuga.",
   "Kõik arvud peavad täpselt kattuma sisendis olevate arvudega. Ära ümarda ega asenda teise allika arvuga.",
-  "Iga sisuline fakt peab tuginema normalizedEvidence.evidenceItems id-le ja vastuses peab olema evidenceIds massiiv.",
-  "Kui evidence id puudub, ära esita väidet kindla faktina; sõnasta see piiranguna.",
+  "Iga valitud ala kohta käiv sisuline fakt peab tuginema normalizedEvidence.evidenceItems id-le ja vastuses peab olema evidenceIds massiiv.",
+  "Üldise mõisteselgituse puhul võib evidenceIds olla tühi, aga ära väida siis midagi konkreetse valitud ala kohta.",
+  "Kui valitud ala fakti evidence id puudub, ära esita väidet kindla faktina; sõnasta see piiranguna.",
   "Raie toimumist tohib pidada tõenäoliseks ainult siis, kui andmepakis on koos metsateatis ja metsamuutuste/LiDAR tõend.",
   "Metsateatis üksi tähendab kavandatud, menetletud või registreeritud tegevust, mitte tehtud raiet.",
   "EELIS kattuvus on kaitse- või keskkonnakontekst, mitte lõplik õiguslik otsus.",
@@ -1409,6 +1735,50 @@ const aiAnswerJsonFormat = {
         type: "array",
         items: { type: "string" }
       },
+      mapAction: {
+        anyOf: [
+          {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              type: {
+                type: "string",
+                enum: ["highlight_area_query"]
+              },
+              filterId: {
+                type: "string",
+                enum: areaQueryFilters.map((filter) => filter.id)
+              },
+              label: { type: "string" },
+              scope: {
+                type: "string",
+                enum: ["current_map_view"]
+              },
+              explanation: { type: "string" },
+              year: { type: ["number", "null"] },
+              beforeYear: { type: ["number", "null"] },
+              ownershipForm: { type: ["string", "null"] },
+              minAreaHa: { type: ["number", "null"] },
+              maxAreaHa: { type: ["number", "null"] },
+              minStands: { type: ["number", "null"] }
+            },
+            required: [
+              "type",
+              "filterId",
+              "label",
+              "scope",
+              "explanation",
+              "year",
+              "beforeYear",
+              "ownershipForm",
+              "minAreaHa",
+              "maxAreaHa",
+              "minStands"
+            ]
+          },
+          { type: "null" }
+        ]
+      },
       followUps: {
         type: "array",
         items: { type: "string" }
@@ -1426,6 +1796,7 @@ const aiAnswerJsonFormat = {
       "cannotSay",
       "missingInfo",
       "evidenceIds",
+      "mapAction",
       "followUps",
       "mapHints"
     ]
@@ -1486,6 +1857,8 @@ async function openAiAnswer(
   const missingInfo = cleanStringArray(parsed.missingInfo, 4);
   const followUps = cleanStringArray(parsed.followUps, 4);
   const mapHints = cleanStringArray(parsed.mapHints, 4);
+  const allowNoEvidence = asksConceptualQuestion(input.question) && !focus;
+  const mapAction = cleanMapAction(parsed.mapAction, fallback.mapAction);
 
   const answer: AreaQuestionAnswer = {
     ...fallback,
@@ -1503,7 +1876,13 @@ async function openAiAnswer(
         ? uniqueRows([...cannotSay, ...missingInfo])
         : fallback.cannotSay,
     evidence: evidenceFromAnalysis(input.analysis),
-    evidenceIds: evidenceIds.length > 0 ? evidenceIds : fallback.evidenceIds,
+    evidenceIds:
+      evidenceIds.length > 0
+        ? evidenceIds
+        : allowNoEvidence
+          ? []
+          : fallback.evidenceIds,
+    mapAction,
     followUps: followUps.length > 0 ? followUps : fallback.followUps,
     mapHints: mapHints.length > 0 ? mapHints : fallback.mapHints,
     sources: input.analysis.sources
@@ -1525,10 +1904,6 @@ export async function generateAreaQuestionAnswer(
 ): Promise<AreaQuestionAnswer> {
   const fallback = answerForIntent(input);
   const provider = requestedProvider();
-
-  if (fallback.mapAction) {
-    return fallback;
-  }
 
   if (provider === "template" || provider === "ollama") {
     return provider === "ollama"

@@ -255,6 +255,75 @@ function UsedDataRow({
   );
 }
 
+const sourceToneClass: Record<string, string> = {
+  "maaamet-etak-forest": "border-emerald-100 bg-emerald-50/80",
+  "maaamet-cadastre": "border-sky-100 bg-sky-50/80",
+  metsaregister: "border-lime-100 bg-lime-50/80",
+  eelis: "border-indigo-100 bg-indigo-50/80",
+  elme: "border-teal-100 bg-teal-50/80",
+  "forest-changes": "border-amber-100 bg-amber-50/80",
+  gaps: "border-amber-100 bg-amber-50/80"
+};
+
+function sourceById(analysis: AnalysisResult, sourceId: string) {
+  return analysis.normalizedEvidence.sourceStatus.find(
+    (source) => source.id === sourceId
+  );
+}
+
+function SourceBlock({
+  analysis,
+  sourceId,
+  title,
+  subtitle,
+  icon: Icon,
+  highlighted,
+  children
+}: {
+  analysis: AnalysisResult;
+  sourceId: string;
+  title: string;
+  subtitle: string;
+  icon: typeof FileText;
+  highlighted?: boolean;
+  children: React.ReactNode;
+}) {
+  const source = sourceById(analysis, sourceId);
+
+  return (
+    <section
+      className={clsx(
+        "scroll-mt-28 rounded-lg border px-3 py-3 transition-shadow",
+        sourceToneClass[sourceId] ?? "border-slate-200 bg-white/88",
+        highlighted && "shadow-[0_0_0_3px_rgba(47,107,60,0.2)]"
+      )}
+      id={`source-block-${sourceId}`}
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Icon aria-hidden className="size-4 shrink-0 text-slate-700" />
+            <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-600">{subtitle}</p>
+          {source?.url ? (
+            <a
+              className="mt-1 inline-flex text-xs font-semibold text-[var(--forest-700)] hover:text-[var(--forest-900)]"
+              href={source.url}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Ava allikas
+            </a>
+          ) : null}
+        </div>
+        {source ? <StatusPill status={source.status} /> : null}
+      </div>
+      <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
+
 function ProtectionGroups({
   groups
 }: {
@@ -399,6 +468,209 @@ function TechnicalDetails({ analysis }: { analysis: AnalysisResult }) {
   );
 }
 
+function SourceBasedAnalysis({
+  analysis,
+  highlightedSourceId,
+  highlightedTargetId
+}: {
+  analysis: AnalysisResult;
+  highlightedSourceId: string | null;
+  highlightedTargetId: string | null;
+}) {
+  const disconnectedSources = analysis.normalizedEvidence.sourceStatus.filter(
+    (source) => source.status !== "loaded"
+  );
+
+  return (
+    <div className="space-y-3">
+      <SourceBlock
+        analysis={analysis}
+        highlighted={highlightedSourceId === "maaamet-etak-forest"}
+        icon={MapPinned}
+        sourceId="maaamet-etak-forest"
+        subtitle="Kaardil klikitav metsaobjekt ja valitud geomeetria."
+        title="ETAK metsaala"
+      >
+        <FactRow
+          label="Objekt"
+          tooltip="ETAK metsaala on topograafiline metsaobjekt kaardil; see ei kirjelda kogu metsanduslikku seisu."
+          value={analysis.area.etakId ? `ETAK ${analysis.area.etakId}` : "ETAK metsaala"}
+        />
+        <FactRow label="Pindala" value={`${analysis.normalizedEvidence.area.areaHa} ha`} />
+        <FactRow label="Tüüp" value={analysis.area.etakType ?? "metsaala"} />
+      </SourceBlock>
+
+      <SourceBlock
+        analysis={analysis}
+        highlighted={highlightedSourceId === "maaamet-cadastre"}
+        icon={Database}
+        sourceId="maaamet-cadastre"
+        subtitle="Katastriüksuse avalik taust: tunnus, omandivorm ja maakasutus."
+        title="Kataster"
+      >
+        <FactRow
+          label="Tunnus"
+          tooltip="Kataster on maaüksuste register. Katastritunnus seob kaardil oleva ala konkreetse maaüksusega."
+          value={analysis.area.cadastralId ?? "andmetes ei leitud"}
+        />
+        <FactRow label="Omand" value={analysis.area.ownershipForm ?? "andmetes ei leitud"} />
+        <FactRow label="Maakasutus" value={analysis.area.landUse ?? "andmetes ei leitud"} />
+        {analysis.area.address ? (
+          <FactRow label="Aadress" value={analysis.area.address} />
+        ) : null}
+      </SourceBlock>
+
+      <SourceBlock
+        analysis={analysis}
+        highlighted={
+          highlightedSourceId === "metsaregister" ||
+          highlightedTargetId === "card-registry" ||
+          highlightedTargetId === "card-attention"
+        }
+        icon={FileText}
+        sourceId="metsaregister"
+        subtitle="Eraldised, inventuur ja metsateatised sama valitud ala kohta."
+        title="Metsaregister"
+      >
+        <FactRow
+          label="Eraldised"
+          value={`${analysis.normalizedEvidence.registrySummary.standsCount} tk`}
+        />
+        <FactRow
+          label="Teatised"
+          tooltip="Metsateatis on ametlik teade kavandatud raie või metsakahjustuse kohta; see ei tõenda üksinda, et töö on toimunud."
+          value={`${analysis.normalizedEvidence.registrySummary.activeNoticesCount} aktiivset, ${analysis.normalizedEvidence.registrySummary.archivedNoticesCount} arhiveeritud`}
+        />
+        <FactRow
+          label="Inventuur"
+          value={analysis.normalizedEvidence.registrySummary.inventorySummary}
+        />
+        <FactRow
+          label="Puuliigid"
+          value={
+            analysis.normalizedEvidence.registrySummary.dominantSpecies.length
+              ? analysis.normalizedEvidence.registrySummary.dominantSpecies.join(", ")
+              : "andmetes ei leitud"
+          }
+        />
+        <FactRow
+          label="Arenguklass"
+          value={
+            analysis.normalizedEvidence.registrySummary.developmentClasses.length
+              ? analysis.normalizedEvidence.registrySummary.developmentClasses.join(", ")
+              : "andmetes ei leitud"
+          }
+        />
+        {analysis.normalizedEvidence.registrySummary.veryOldInventory ? (
+          <p className="rounded-md bg-amber-50 px-2 py-2 text-xs font-medium leading-5 text-amber-900 ring-1 ring-amber-200">
+            Inventuuriandmed võivad olla väga vanad, seega tänase metsaseisu
+            kohta tuleb järeldusi hoida ettevaatlikuna.
+          </p>
+        ) : null}
+      </SourceBlock>
+
+      <SourceBlock
+        analysis={analysis}
+        highlighted={
+          highlightedSourceId === "eelis" ||
+          highlightedTargetId === "card-protection"
+        }
+        icon={ShieldAlert}
+        sourceId="eelis"
+        subtitle="Kaitse-, Natura-, VEP-, piirangu- ja elupaigakattuvused."
+        title="EELIS"
+      >
+        <ProtectionGroups groups={analysis.normalizedEvidence.protectionSummary} />
+      </SourceBlock>
+
+      <SourceBlock
+        analysis={analysis}
+        highlighted={
+          highlightedSourceId === "elme" ||
+          highlightedTargetId === "card-ecosystem"
+        }
+        icon={Layers}
+        sourceId="elme"
+        subtitle="Looduse hüvede lisakontekst, mitte raie või lubatavuse tõend."
+        title="ELME"
+      >
+        <EcosystemDetails analysis={analysis} />
+      </SourceBlock>
+
+      <section
+        className={clsx(
+          "rounded-lg border px-3 py-3",
+          sourceToneClass.gaps,
+          highlightedTargetId === "card-cannot-claim" &&
+            "shadow-[0_0_0_3px_rgba(47,107,60,0.2)]"
+        )}
+        id="card-cannot-claim"
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <AlertTriangle aria-hidden className="size-4 text-amber-800" />
+              <h3 className="text-sm font-semibold text-slate-950">
+                Puudu või ühendamata
+              </h3>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              Need piiravad järeldusi. Neid ei kasutata kindla faktitõendina.
+            </p>
+          </div>
+          <span className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-amber-900 ring-1 ring-amber-200">
+            {analysis.normalizedEvidence.dataCompleteness.score}/100
+          </span>
+        </div>
+        <p className="mb-2 text-sm leading-5 text-slate-800">
+          {analysis.normalizedEvidence.dataCompleteness.meaning}
+        </p>
+        <div className="space-y-2">
+          {disconnectedSources.length > 0 ? (
+            disconnectedSources.map((source) => (
+              <UsedDataRow
+                highlighted={highlightedSourceId === source.id}
+                key={source.id}
+                source={source}
+              />
+            ))
+          ) : (
+            <p className="rounded-lg bg-white/80 px-3 py-2 text-sm text-slate-700 ring-1 ring-slate-200">
+              Peamised prototüübi allikad on selle ala kohta laetud.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {analysis.normalizedEvidence.timeline.length > 0 ? (
+        <details className="group rounded-lg border border-slate-200 bg-white/82">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-semibold text-slate-900">
+            Ajajoon
+            <ChevronDown
+              aria-hidden
+              className="size-4 transition group-open:rotate-180"
+            />
+          </summary>
+          <div className="space-y-2 border-t border-slate-200 p-3">
+            {analysis.normalizedEvidence.timeline.map((item) => (
+              <div
+                className="rounded-lg border border-slate-200 bg-white/88 px-3 py-2 text-sm leading-5 text-slate-700"
+                key={item.id}
+              >
+                <div className="font-semibold text-slate-950">
+                  {item.year ? `${item.year}: ` : ""}
+                  {item.label}
+                </div>
+                <div>{item.detail}</div>
+              </div>
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
 export function AnalysisPanel({
   analysis,
   isLoading,
@@ -504,6 +776,14 @@ export function AnalysisPanel({
             </p>
           </header>
 
+          {true ? (
+            <SourceBasedAnalysis
+              analysis={analysis}
+              highlightedSourceId={highlightedSourceId}
+              highlightedTargetId={highlightedTargetId}
+            />
+          ) : null}
+          {/*
           <section
             className="rounded-lg border border-[var(--forest-200)] bg-[var(--sage-50)] px-3 py-3 text-[var(--forest-950)]"
             id="card-basic"
@@ -682,6 +962,8 @@ export function AnalysisPanel({
               </div>
             </Section>
           ) : null}
+
+          */}
 
           <TechnicalDetails analysis={analysis} />
         </div>

@@ -773,4 +773,31 @@ describe("generateAreaQuestionAnswer", () => {
     expect(notices.mapAction?.filterId).toBe("no_forest_notice");
     expect(wood.mapAction?.filterId).toBe("has_wood_raw_material");
   });
+
+  it("returns map actions for area size and stand count queries", async () => {
+    const large = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ stands: 12, areaHa: 120 }),
+      question: "Naita ule 100 ha alasid"
+    });
+    const manyStands = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ stands: 12, areaHa: 120 }),
+      question: "Naita vahemalt 10 eraldisega alasid"
+    });
+
+    expect(large.mapAction?.filterId).toBe("area_larger_than");
+    expect(large.mapAction?.minAreaHa).toBe(100);
+    expect(manyStands.mapAction?.filterId).toBe("many_registry_stands");
+    expect(manyStands.mapAction?.minStands).toBe(10);
+  });
+
+  it("answers forestry source concept questions without pretending they are area facts", async () => {
+    const answer = await generateAreaQuestionAnswer({
+      analysis: analysisWith(),
+      question: "Mis kataster üldse on?"
+    });
+
+    expect(answer.shortAnswer.toLocaleLowerCase("et")).toContain("register");
+    expect(answer.explanation.toLocaleLowerCase("et")).toContain("metsatark");
+    expect(answer.evidenceIds).toEqual([]);
+  });
 });

@@ -75,9 +75,9 @@ export function SearchBar({
   }
 
   return (
-    <div className="relative flex-1" ref={wrapperRef}>
+    <div className="relative w-full sm:w-[430px] sm:flex-none" ref={wrapperRef}>
       <form
-        className="flex h-12 items-center gap-2 rounded-lg border border-white/70 bg-white/80 px-3 shadow-sm"
+        className="flex h-10 items-center gap-2 rounded-md border border-white/70 bg-white/90 px-3 shadow-sm"
         onSubmit={submit}
       >
         <Search aria-hidden className="size-4 shrink-0 text-[var(--forest-700)]" />

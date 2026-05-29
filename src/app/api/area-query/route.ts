@@ -35,7 +35,10 @@ function parseFilter(value: string | null): AreaQueryFilterId | null {
     value === "no_forest_notice" ||
     value === "has_wood_raw_material" ||
     value === "has_carbon_storage" ||
-    value === "no_registry_stands"
+    value === "no_registry_stands" ||
+    value === "area_larger_than" ||
+    value === "area_smaller_than" ||
+    value === "many_registry_stands"
   ) {
     return value;
   }
@@ -74,6 +77,19 @@ function parseOwnershipForm(value: string | null): string | undefined {
   return normalized.length > 0 && normalized.length < 80 ? normalized : undefined;
 }
 
+function parsePositiveNumber(value: string | null): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
 export async function GET(request: NextRequest) {
   const bbox = parseBbox(request.nextUrl.searchParams.get("bbox"));
   const filterId = parseFilter(request.nextUrl.searchParams.get("filter"));
@@ -81,6 +97,15 @@ export async function GET(request: NextRequest) {
   const beforeYear = parseYear(request.nextUrl.searchParams.get("beforeYear"));
   const ownershipForm = parseOwnershipForm(
     request.nextUrl.searchParams.get("ownershipForm")
+  );
+  const minAreaHa = parsePositiveNumber(
+    request.nextUrl.searchParams.get("minAreaHa")
+  );
+  const maxAreaHa = parsePositiveNumber(
+    request.nextUrl.searchParams.get("maxAreaHa")
+  );
+  const minStands = parsePositiveNumber(
+    request.nextUrl.searchParams.get("minStands")
   );
 
   if (!bbox || !filterId) {
@@ -111,6 +136,24 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
+  if (filterId === "area_larger_than" && !minAreaHa) {
+    return NextResponse.json(
+      { error: "area_larger_than filter requires minAreaHa." },
+      { status: 400 }
+    );
+  }
+  if (filterId === "area_smaller_than" && !maxAreaHa) {
+    return NextResponse.json(
+      { error: "area_smaller_than filter requires maxAreaHa." },
+      { status: 400 }
+    );
+  }
+  if (filterId === "many_registry_stands" && !minStands) {
+    return NextResponse.json(
+      { error: "many_registry_stands filter requires minStands." },
+      { status: 400 }
+    );
+  }
 
   try {
     const result = await runAreaQuery({
@@ -119,6 +162,9 @@ export async function GET(request: NextRequest) {
       year,
       beforeYear,
       ownershipForm,
+      minAreaHa,
+      maxAreaHa,
+      minStands,
       limit: parseLimit(request.nextUrl.searchParams.get("limit"))
     });
 

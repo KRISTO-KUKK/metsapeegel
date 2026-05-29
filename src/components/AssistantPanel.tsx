@@ -52,9 +52,14 @@ const suggestionChips = [
   "Naita kaitsekattuvusega alasid",
   "Naita 2024 inventuuriga alasid",
   "Naita riigiomandis alasid",
+  "Naita ule 100 ha alasid",
+  "Naita vahemalt 10 eraldisega alasid",
   "Naita metsateatisega alasid",
   "Naita puidutooraine kattuvusega alasid",
+  "Naita susiniku kattuvusega alasid",
   "Võta kokku, mis siin tõenäoliselt toimunud on",
+  "Mis kataster üldse on?",
+  "Mis on metsateatis?",
   "Palju on puidutooraine kattuvusi?",
   "Kas siin on raie kohta tõendeid?",
   "Kas see ala on kaitse all?",
@@ -203,7 +208,7 @@ function AnswerMessage({
             {isRealAi ? "Metsatark AI" : "Metsatark"}
           </span>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-            ainult andmepakk
+            andmed + mõisted
           </span>
         </div>
 
@@ -373,7 +378,7 @@ export function AssistantPanel({
           </h2>
           {analysis ? (
             <span className="ml-auto rounded-full bg-white px-2 py-1 text-[11px] text-slate-600 ring-1 ring-slate-200">
-              ainult valitud andmed
+              andmed + mõisted
             </span>
           ) : null}
           <button
@@ -395,8 +400,8 @@ export function AssistantPanel({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
         {!analysis ? (
           <div className="rounded-2xl bg-white px-3 py-3 text-sm leading-5 text-slate-600 shadow-sm ring-1 ring-slate-200">
-            Vali kaardilt metsaala. Siis saad küsida ainult selle ala ametlike
-            andmete põhjal.
+            Vali kaardilt metsaala. Siis saad küsida selle ala ametlike andmete
+            või metsanduse mõistete kohta.
           </div>
         ) : null}
 
@@ -434,8 +439,8 @@ export function AssistantPanel({
 
         {analysis && turns.length === 0 && !isLoading ? (
           <div className="rounded-2xl bg-white px-3 py-3 text-sm leading-5 text-slate-700 shadow-sm ring-1 ring-slate-200">
-            Küsi näiteks, kas raie kohta on tõendeid või milliseid järeldusi ei
-            tohiks selle andmepaki põhjal teha.
+            Küsi näiteks, kas raie kohta on tõendeid, mida mõni termin tähendab
+            või milliseid järeldusi ei tohiks selle andmepaki põhjal teha.
           </div>
         ) : null}
 
@@ -463,7 +468,7 @@ export function AssistantPanel({
             maxLength={900}
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={onComposerKeyDown}
-            placeholder="Küsi valitud ala kohta..."
+            placeholder="Küsi ala või mõiste kohta..."
             rows={2}
             value={question}
           />
