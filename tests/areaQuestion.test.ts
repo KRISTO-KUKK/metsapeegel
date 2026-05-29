@@ -76,7 +76,11 @@ function analysisWith({
         properties: {
           id: `stand-${index}`,
           inventoryYear: 2015,
-          mainSpecies: index % 2 === 0 ? "mänd" : "kask"
+          mainSpecies: index % 2 === 0 ? "mänd" : "kask",
+          averageAge: 83,
+          averageHarvestAge: 64,
+          heightM: 26.1,
+          bonitetClass: "2"
         }
       })),
       notices: Array.from({ length: notices }, (_, index) => ({
@@ -461,7 +465,18 @@ function analysisWith({
       inventorySummary:
         stands > 0
           ? `2015: ${stands} eraldise inventuuriandmed.`
-          : "Inventuuriaastat andmetes ei leitud."
+          : "Inventuuriaastat andmetes ei leitud.",
+      standAgeSummary:
+        stands > 0
+          ? `Puistute keskmine vanus: 83 a. Keskmine raievanus andmetes: 64 a. ${stands}/${stands} eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.`
+          : "Puistu keskmist vanust andmetes ei leitud.",
+      standAgeMin: stands > 0 ? 83 : undefined,
+      standAgeMax: stands > 0 ? 83 : undefined,
+      averageHarvestAgeMin: stands > 0 ? 64 : undefined,
+      averageHarvestAgeMax: stands > 0 ? 64 : undefined,
+      standsWithAgeCount: stands,
+      standsWithHarvestAgeCount: stands,
+      standsAtOrAboveAverageHarvestAge: stands
     },
     ecosystemContext: {
       sourceStatus:
@@ -637,6 +652,33 @@ describe("generateAreaQuestionAnswer", () => {
 
     expect(answer.verdict).toBe("unknown");
     expect(answer.cannotSay.join(" ")).toContain("juriidilist hinnangut");
+  });
+
+  it("explains protected area impacts without pretending to be a permit decision", async () => {
+    const answer = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ protectedAreas: 1, stands: 7 }),
+      question: "Kuidas need kaitsealad mind omanikuna mõjutavad?"
+    });
+
+    const text = `${answer.shortAnswer}\n${answer.explanation}\n${answer.canSay.join(" ")}\n${answer.cannotSay.join(" ")}`;
+    expect(text).toContain("kaitse-eeskirja");
+    expect(text).toContain("hüvit");
+    expect(text).toContain("Metsatark ei saa");
+    expect(answer.evidenceIds).toContain("protection-summary");
+  });
+
+  it("uses stand age fields but refuses to call age a logging permit", async () => {
+    const answer = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ protectedAreas: 1, stands: 3 }),
+      question: "Kas puude vanus lubaks siin raiet?"
+    });
+
+    const text = `${answer.shortAnswer}\n${answer.explanation}\n${answer.canSay.join(" ")}\n${answer.cannotSay.join(" ")}`;
+    expect(text).toContain("83");
+    expect(text).toContain("64");
+    expect(text).toContain("Inventuuriaasta ei ole puude vanus");
+    expect(text).toContain("ei ole raieluba");
+    expect(answer.evidenceIds).toContain("registry-stands");
   });
 
   it("supports protection answers when EELIS overlap exists", async () => {

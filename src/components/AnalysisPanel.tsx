@@ -275,7 +275,6 @@ function SourceBlock({
   analysis,
   sourceId,
   title,
-  subtitle,
   icon: Icon,
   highlighted,
   children
@@ -283,7 +282,6 @@ function SourceBlock({
   analysis: AnalysisResult;
   sourceId: string;
   title: string;
-  subtitle: string;
   icon: typeof FileText;
   highlighted?: boolean;
   children: React.ReactNode;
@@ -305,7 +303,6 @@ function SourceBlock({
             <Icon aria-hidden className="size-4 shrink-0 text-slate-700" />
             <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
           </div>
-          <p className="mt-1 text-xs leading-5 text-slate-600">{subtitle}</p>
           {source?.url ? (
             <a
               className="mt-1 inline-flex text-xs font-semibold text-[var(--forest-700)] hover:text-[var(--forest-900)]"
@@ -488,7 +485,6 @@ function SourceBasedAnalysis({
         highlighted={highlightedSourceId === "maaamet-etak-forest"}
         icon={MapPinned}
         sourceId="maaamet-etak-forest"
-        subtitle="Kaardil klikitav metsaobjekt ja valitud geomeetria."
         title="ETAK metsaala"
       >
         <FactRow
@@ -505,7 +501,6 @@ function SourceBasedAnalysis({
         highlighted={highlightedSourceId === "maaamet-cadastre"}
         icon={Database}
         sourceId="maaamet-cadastre"
-        subtitle="Katastriüksuse avalik taust: tunnus, omandivorm ja maakasutus."
         title="Kataster"
       >
         <FactRow
@@ -529,7 +524,6 @@ function SourceBasedAnalysis({
         }
         icon={FileText}
         sourceId="metsaregister"
-        subtitle="Eraldised, inventuur ja metsateatised sama valitud ala kohta."
         title="Metsaregister"
       >
         <FactRow
@@ -544,6 +538,13 @@ function SourceBasedAnalysis({
         <FactRow
           label="Inventuur"
           value={analysis.normalizedEvidence.registrySummary.inventorySummary}
+        />
+        <FactRow
+          label="Vanus"
+          value={
+            analysis.normalizedEvidence.registrySummary.standAgeSummary ??
+            "andmetes ei leitud"
+          }
         />
         <FactRow
           label="Puuliigid"
@@ -577,7 +578,6 @@ function SourceBasedAnalysis({
         }
         icon={ShieldAlert}
         sourceId="eelis"
-        subtitle="Kaitse-, Natura-, VEP-, piirangu- ja elupaigakattuvused."
         title="EELIS"
       >
         <ProtectionGroups groups={analysis.normalizedEvidence.protectionSummary} />
@@ -591,7 +591,6 @@ function SourceBasedAnalysis({
         }
         icon={Layers}
         sourceId="elme"
-        subtitle="Looduse hüvede lisakontekst, mitte raie või lubatavuse tõend."
         title="ELME"
       >
         <EcosystemDetails analysis={analysis} />

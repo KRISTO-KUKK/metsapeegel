@@ -529,6 +529,10 @@ function standFromMetsaregister(
     ),
     siteType: classifierLabel(classifiers, "KASVUKOHT", row.kasvukohaKood),
     inventoryYear: yearFromEpoch(row.inventKp),
+    averageAge: numberValue(row.keskmVanus),
+    averageHarvestAge: numberValue(row.keskmRaievanus),
+    heightM: numberValue(row.korgus),
+    bonitetClass: codeValue(row.boniteediKood),
     registryStage: classifierLabel(classifiers, "ETAPP", row.etapp),
     areaHa: numberValue(row.pindala) ?? roundHa(turfArea({
       type: "Feature",

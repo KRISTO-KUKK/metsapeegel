@@ -13,6 +13,18 @@ import {
   areaQueryFilters,
   getAreaQueryFilter
 } from "@/lib/data/sourceRegistry";
+import {
+  forestLawSources,
+  forestLawTopicsForQuestion
+} from "@/lib/ai/forestLaw";
+import {
+  dominantSpeciesAreaShares,
+  dominantSpeciesStockShares,
+  nationalForestInsights,
+  nationalForestStatSources,
+  nationalMetrics,
+  ownershipShares
+} from "@/lib/data/nationalForestStats";
 
 type AreaQuestionInput = {
   analysis: AnalysisResult;
@@ -136,6 +148,22 @@ const conceptGlossary: ConceptGlossaryItem[] = [
       "Eraldiste arv ja vanus aitavad aru saada, kui detailne või ajakohane registrikirjeldus on.",
     selectedAreaBoundary:
       "Eraldiste arv ei tõenda raiet ega metsa head või halba seisundit; see on registri jaotuse info."
+  },
+  {
+    id: "stand_age",
+    terms: [
+      "puistu vanus",
+      "puude vanus",
+      "keskmine vanus",
+      "raievanus",
+      "raieküps"
+    ],
+    shortDefinition:
+      "Puistu keskmine vanus on Metsaregistri takseerandmetes kirjeldatud metsa vanus; raievanus on reeglipõhine võrdluspunkt, mis sõltub puuliigist, boniteedist ja puistu koosseisust.",
+    whyItMatters:
+      "Vanuse võrdlus aitab aru saada, kas lageraie või turberaie vanusepoolne eeldus võib olla täidetud.",
+    selectedAreaBoundary:
+      "Raievanus üksi ei ole raieluba: kaitsekord, metsateatis, raieliik ja muud metsa majandamise nõuded tuleb ikkagi kontrollida."
   },
   {
     id: "eelis",
@@ -269,7 +297,50 @@ function detectedIntent(question: string) {
       "rikkumine",
       "lubatud",
       "keelatud",
-      "õiguspärane"
+      "õiguspärane",
+      "tohib",
+      "ei tohi",
+      "õigus",
+      "oigus",
+      "nõusolek",
+      "nousolek"
+    ]),
+    asksProtectionImpact: includesAny(normalized, [
+      "kuidas kaitse",
+      "kuidas need kaitse",
+      "kuidas piirang",
+      "mõjutab",
+      "mojutab",
+      "omanikuna",
+      "mida tohib",
+      "mida ei tohi",
+      "sihtkaitse",
+      "piiranguvöönd",
+      "kaitse-eeskiri"
+    ]),
+    asksCompensation: includesAny(normalized, [
+      "hüvitis",
+      "huvitis",
+      "kompensatsioon",
+      "toetus",
+      "saamata jäänud tulu",
+      "saamata jaanud tulu",
+      "maamaks",
+      "saab selle eest",
+      "riigile müük",
+      "riigile myyk"
+    ]),
+    asksTreeAge: includesAny(normalized, [
+      "puude vanus",
+      "puistu vanus",
+      "keskmine vanus",
+      "raievanus",
+      "raieküps",
+      "raiekups",
+      "kui vana",
+      "vanus lubab",
+      "vanuse põhjal",
+      "vanuse pohjal"
     ]),
     asksLimits: includesAny(normalized, [
       "ei saa väita",
@@ -371,7 +442,7 @@ function mapActionForQuestion(question: string): AreaMapAction | undefined {
 function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
   const normalized = normalizeQuestion(question);
   const asksForMapSet = includesAny(normalized, [
-    "nÃ¤ita",
+    "näita",
     "naita",
     "leia",
     "filtreeri",
@@ -379,7 +450,7 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
     "mis alad",
     "otsi alasid",
     "highlight",
-    "mÃ¤rgi",
+    "märgi",
     "margi",
     "kaardil",
     "kus on",
@@ -408,7 +479,7 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
       label: "Alad ilma kaitsekattuvuseta",
       scope: "current_map_view",
       explanation:
-        "Filtreerin praeguses kaardivaates ETAK metsaalad, millele uhendatud avalikud EELIS kihid ei tagasta kaitsekattuvust."
+        "Filtreerin praeguses kaardivaates ETAK metsaalad, millele ühendatud avalikud EELIS kihid ei tagasta kaitsekattuvust."
     };
   }
 
@@ -422,7 +493,7 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
       label: "Kaitsekattuvusega alad",
       scope: "current_map_view",
       explanation:
-        "Filtreerin praeguses kaardivaates ETAK metsaalad, millele uhendatud avalikud EELIS kihid tagastavad kaitsekattuvuse."
+        "Filtreerin praeguses kaardivaates ETAK metsaalad, millele ühendatud avalikud EELIS kihid tagastavad kaitsekattuvuse."
     };
   }
 
@@ -439,7 +510,7 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
       beforeYear,
       scope: "current_map_view",
       explanation:
-        "Filtreerin praeguses kaardivaates metsaalad, mille Metsaregistri eraldiste inventuuriaasta on enne kusitud aastat."
+        "Filtreerin praeguses kaardivaates metsaalad, mille Metsaregistri eraldiste inventuuriaasta on enne küsitud aastat."
     };
   }
 
@@ -491,7 +562,7 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
       label: "Metsateatiseta alad",
       scope: "current_map_view",
       explanation:
-        "Filtreerin praeguses kaardivaates metsaalad, mille kohta Metsaregistri avalik paring ei tagasta metsateatist."
+        "Filtreerin praeguses kaardivaates metsaalad, mille kohta Metsaregistri avalik päring ei tagasta metsateatist."
     };
   }
 
@@ -502,7 +573,7 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
       label: "Metsateatisega alad",
       scope: "current_map_view",
       explanation:
-        "Filtreerin praeguses kaardivaates metsaalad, mille kohta Metsaregistri avalik paring tagastab metsateatise."
+        "Filtreerin praeguses kaardivaates metsaalad, mille kohta Metsaregistri avalik päring tagastab metsateatise."
     };
   }
 
@@ -517,14 +588,14 @@ function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
     };
   }
 
-  if (includesAny(normalized, ["sÃ¼sinik", "susinik", "carbon"])) {
+  if (includesAny(normalized, ["süsinik", "susinik", "carbon"])) {
     return {
       type: "highlight_area_query",
       filterId: "has_carbon_storage",
-      label: "Susiniku ELME kattuvusega alad",
+      label: "Süsiniku ELME kattuvusega alad",
       scope: "current_map_view",
       explanation:
-        "Filtreerin praeguses kaardivaates metsaalad, millele ELME susinikuvaru kiht tagastab kattuvuse."
+        "Filtreerin praeguses kaardivaates metsaalad, millele ELME süsinikuvaru kiht tagastab kattuvuse."
     };
   }
 
@@ -813,6 +884,25 @@ function interpretationSignalsForAnalysis(analysis: AnalysisResult) {
         ? "Inventuuriandmed on vanad, seega tänase metsaseisu kohta tuleb järeldusi hoida ettevaatlikuna."
         : "Inventuuri vanus ei ole selles andmepakis peamine punane lipp."
     },
+    standAge: {
+      summary:
+        registry.standAgeSummary ??
+        "Puistu keskmist vanust ega raievanuse võrdlust andmepakis ei ole.",
+      standAgeMin: registry.standAgeMin,
+      standAgeMax: registry.standAgeMax,
+      averageHarvestAgeMin: registry.averageHarvestAgeMin,
+      averageHarvestAgeMax: registry.averageHarvestAgeMax,
+      standsWithAgeCount: registry.standsWithAgeCount ?? 0,
+      standsWithHarvestAgeCount: registry.standsWithHarvestAgeCount ?? 0,
+      standsAtOrAboveAverageHarvestAge:
+        registry.standsAtOrAboveAverageHarvestAge ?? 0,
+      interpretation:
+        (registry.standsWithAgeCount ?? 0) === 0
+          ? "Metsaregistri eraldistes ei ole selles andmepakis puistu vanust, seega raievanuse kohta ei saa ala järeldust teha."
+          : (registry.standsWithHarvestAgeCount ?? 0) === 0
+            ? "Puistu vanus on osaliselt olemas, aga keskmist raievanust ei ole võrdluseks piisavalt."
+            : `${registry.standsAtOrAboveAverageHarvestAge ?? 0}/${registry.standsWithHarvestAgeCount ?? 0} vanuseandmetega eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle; see ei ole üksi raieluba.`
+    },
     ecosystem: {
       woodRawMaterialCount: normalized.ecosystemContext.woodRawMaterialCount,
       carbonStorageCount: normalized.ecosystemContext.carbonStorageCount,
@@ -820,6 +910,239 @@ function interpretationSignalsForAnalysis(analysis: AnalysisResult) {
       summary: normalized.ecosystemContext.summary
     },
     sourceGaps
+  };
+}
+
+function legalKnowledgeForAnalysis(analysis: AnalysisResult, question: string) {
+  const normalized = analysis.normalizedEvidence;
+  const registry = normalized.registrySummary;
+  const topics = forestLawTopicsForQuestion(question);
+  const ownership = ownershipCategory(normalized.area.ownershipForm);
+  const relevantSourceIds = new Set(topics.flatMap((topic) => topic.sourceIds));
+
+  return {
+    checkedAt: "2026-05-29",
+    useRules: [
+      "Kasuta seda plokki ainult Eesti metsa- ja looduskaitse reeglite yldiseks selgitamiseks.",
+      "Valitud ala faktid peavad ikka tulema selectedAreaData, queryableFacts, sourceDetails ja normalizedEvidence plokkidest.",
+      "Ara anna ametlikku luba, keeldu, rikkumise otsust ega toetuse garantiid."
+    ],
+    areaLegalSignals: {
+      ownershipForm: normalized.area.ownershipForm,
+      ownershipCategory: ownership,
+      hasPrivateOwnership: ownership === "private",
+      hasProtectionOverlap: normalized.protectionSummary.length > 0,
+      protectionGroups: normalized.protectionSummary,
+      hasForestNotices:
+        registry.activeNoticesCount + registry.archivedNoticesCount > 0,
+      hasChangeEvidence: harvestHasChangeProof(analysis),
+      forestRegistry: {
+        standsCount: registry.standsCount,
+        dominantSpecies: registry.dominantSpecies,
+        developmentClasses: registry.developmentClasses,
+        inventoryYears: registry.inventoryYears,
+        inventorySummary: registry.inventorySummary,
+        standAgeSummary: registry.standAgeSummary,
+        standAgeMin: registry.standAgeMin,
+        standAgeMax: registry.standAgeMax,
+        averageHarvestAgeMin: registry.averageHarvestAgeMin,
+        averageHarvestAgeMax: registry.averageHarvestAgeMax,
+        standsWithAgeCount: registry.standsWithAgeCount ?? 0,
+        standsWithHarvestAgeCount: registry.standsWithHarvestAgeCount ?? 0,
+        standsAtOrAboveAverageHarvestAge:
+          registry.standsAtOrAboveAverageHarvestAge ?? 0
+      },
+      missingForLegalDecision: uniqueRows([
+        normalized.protectionSummary.length > 0
+          ? "Täpne kaitsevöönd ja konkreetne kaitse-eeskiri ei pruugi olla andmepakis otsustusena olemas."
+          : undefined,
+        "Ametlik menetlusotsus või Keskkonnaameti nõusolek ei ole andmepakis.",
+        !harvestHasChangeProof(analysis)
+          ? "Metsamuutuste/LiDAR tõend on ühendamata, seega tegelikku raiet ei saa kinnitada."
+          : undefined,
+        (registry.standsWithAgeCount ?? 0) === 0
+          ? "Puistu keskmise vanuse andmeid ei leitud."
+          : undefined
+      ])
+    },
+    topics,
+    sources: forestLawSources.filter((source) => relevantSourceIds.has(source.id))
+  };
+}
+
+function nationalForestContextForAi() {
+  return {
+    role:
+      "Üleriigiline taust valitud ala tõlgendamiseks; see ei ole sama asi kui valitud metsaala tõend.",
+    keyMetrics: nationalMetrics.map((metric) => ({
+      id: metric.id,
+      label: metric.label,
+      value: metric.value,
+      detail: metric.detail
+    })),
+    ownershipShares,
+    dominantSpeciesAreaShares,
+    dominantSpeciesStockShares,
+    interpretationHints: nationalForestInsights,
+    sources: nationalForestStatSources.map((source) => ({
+      id: source.id,
+      label: source.label,
+      url: source.url,
+      note: source.note
+    }))
+  };
+}
+
+function summarizeProtectionGroups(normalized: NormalizedSelectedAreaEvidence) {
+  if (normalized.protectionSummary.length === 0) {
+    return "EELIS kaitse-, Natura-, VEP- või elupaigakattuvust ei näita.";
+  }
+
+  return normalized.protectionSummary
+    .slice(0, 4)
+    .map((group) => {
+      const overlap =
+        group.overlapHa !== undefined ? `, kattuvus ligikaudu ${group.overlapHa} ha` : "";
+      const codes = group.codes?.length ? ` (${group.codes.join(", ")})` : "";
+      return `${group.label}${codes}${overlap}`;
+    })
+    .join("; ");
+}
+
+function protectionImpactAnswer(input: AreaQuestionInput): AreaQuestionAnswer {
+  const { analysis, question } = input;
+  const normalized = analysis.normalizedEvidence;
+  const registry = normalized.registrySummary;
+  const hasProtection = normalized.protectionSummary.length > 0;
+  const privateOwner = ownershipCategory(normalized.area.ownershipForm) === "private";
+  const evidenceIds = evidenceById(normalized, [
+    "protection-summary",
+    "cadastre-context",
+    "registry-stands",
+    "registry-active-notices",
+    "forest-change-proof"
+  ]);
+
+  const compensationLine = privateOwner
+    ? "Kuna katastri kontekst näitab eraomandit, võib kaitsepiirangu korral olla asjakohane kontrollida Natura/looduskaitselise piirangu hüvitise või maamaksusoodustuse õigust. Metsatark ei saa seda automaatselt lubada."
+    : "Hüvitiste jutt käib peamiselt erametsaomaniku kohta; selle ala omandivorm ei näita siin eraomaniku olukorda.";
+
+  return {
+    mode: "template",
+    status: "ready",
+    provider: "deterministic-forest-law",
+    question,
+    verdict: hasProtection ? "partial" : "unknown",
+    verdictLabel: verdictLabels[hasProtection ? "partial" : "unknown"],
+    confidence: normalized.dataCompleteness.score,
+    shortAnswer: hasProtection
+      ? "See kattuvus võib omanikule tähendada lisapiiranguid ja vajadust vaadata konkreetset kaitse-eeskirja, mitte lihtsalt tavalist metsaseaduse reeglit."
+      : "Praegune andmepakk kaitsekattuvust ei näita, seega ei saa selle ala kohta kaitseala mõju väita.",
+    explanation: [
+      hasProtection
+        ? `Andmepakis on kaitsekontekst: ${summarizeProtectionGroups(normalized)}.`
+        : "Ühendatud EELIS kihid ei tagastanud kaitse-, Natura-, VEP- ega elupaigakattuvust.",
+      hasProtection
+        ? "Üldreegel: sihtkaitsevöönd on rangem ja majandustegevus on seal üldjuhul keelatud; piiranguvööndis võib majandada, aga kaitse-eeskiri võib seada raieviisile, ajale, langile või väljaveole tingimusi."
+        : "Kui kaitseinfo on mitteavalik või eraldi menetluses, seda see prototüüp ei pruugi näha.",
+      compensationLine,
+      registry.standAgeSummary
+        ? `Puistu vanuse kontekst: ${registry.standAgeSummary} Vanus ei asenda kaitse-eeskirja ega raieluba.`
+        : undefined
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    canSay: uniqueRows([
+      hasProtection
+        ? "Kaitsekattuvus on oluline praktiline riskisignaal ja enne raiet või muud tegevust tuleks kontrollida vööndit ning kaitse-eeskirja."
+        : "Andmepakis ei ole avalikku kaitsekattuvust.",
+      normalized.area.ownershipForm
+        ? `Katastri avalik omandivorm: ${normalized.area.ownershipForm}.`
+        : undefined,
+      registry.standsCount > 0
+        ? `Metsaregistris on ${registry.standsCount} eraldist ja ${registry.inventorySummary}`
+        : undefined
+    ]),
+    cannotSay: uniqueRows([
+      "Metsatark ei saa EELIS kattuvuse põhjal öelda, et konkreetne tegevus on lubatud või keelatud.",
+      "Metsatark ei saa anda ametlikku õigusnõu, Keskkonnaameti nõusolekut ega toetuse garantiid.",
+      "Hüvitise või maamaksusoodustuse õigus vajab toetuskõlbliku ala ja taotlustingimuste kontrolli."
+    ]),
+    evidence: evidenceFromAnalysis(analysis),
+    evidenceIds,
+    mapHints: [],
+    followUps: [
+      "Milline info on õigusliku otsuse jaoks puudu?",
+      "Kas puude vanus lubaks siin raiet?",
+      "Kas selle ala eest võiks hüvitist küsida?"
+    ],
+    sources: analysis.sources
+  };
+}
+
+function treeAgeAnswer(input: AreaQuestionInput): AreaQuestionAnswer {
+  const { analysis, question } = input;
+  const normalized = analysis.normalizedEvidence;
+  const registry = normalized.registrySummary;
+  const signals = interpretationSignalsForAnalysis(analysis);
+  const hasAge = (registry.standsWithAgeCount ?? 0) > 0;
+  const hasHarvestAge = (registry.standsWithHarvestAgeCount ?? 0) > 0;
+  const hasProtection = normalized.protectionSummary.length > 0;
+  const evidenceIds = evidenceById(normalized, [
+    "registry-stands",
+    "protection-summary",
+    "registry-active-notices",
+    "forest-change-proof"
+  ]);
+
+  return {
+    mode: "template",
+    status: "ready",
+    provider: "deterministic-forest-law",
+    question,
+    verdict: hasAge ? "partial" : "unknown",
+    verdictLabel: verdictLabels[hasAge ? "partial" : "unknown"],
+    confidence: normalized.dataCompleteness.score,
+    shortAnswer: hasAge
+      ? "Puistu vanuse kohta on andmeid, aga vanus üksi ei ütle, et raiet tohib teha."
+      : "Selles andmepakis ei ole puistu keskmise vanuse andmeid, seega ei saa vanuse põhjal raievõimalust hinnata.",
+    explanation: [
+      hasAge
+        ? registry.standAgeSummary
+        : "Metsaregistri eraldised ei andnud puistu keskmise vanuse välja.",
+      hasHarvestAge
+        ? signals.standAge.interpretation
+        : "Raievanuse võrdlus vajab puistu keskmist vanust ja keskmist raievanust; inventuuriaasta ei ole puude vanus.",
+      "Üldreegel: lageraie ja turberaie vanusepoolne sobivus sõltub puistu koosseisuga kaalutud keskmisest vanusest ning raievanusest; sanitaarraie võib olla võimalik ka eri vanuses puistus, aga ainult sanitaarraie tingimustel.",
+      hasProtection
+        ? "Selle ala kaitsekattuvus võib tavalisest raievanuse loogikast rangem olla, seega tuleb kontrollida kaitsevööndit ja kaitse-eeskirja."
+        : undefined
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    canSay: uniqueRows([
+      registry.dominantSpecies.length > 0
+        ? `Peamised puuliigid andmetes: ${registry.dominantSpecies.join(", ")}.`
+        : undefined,
+      registry.developmentClasses.length > 0
+        ? `Arenguklassid andmetes: ${registry.developmentClasses.join(", ")}.`
+        : undefined,
+      hasAge ? registry.standAgeSummary : undefined
+    ]),
+    cannotSay: uniqueRows([
+      "Inventuuriaasta ei ole puude vanus.",
+      "Vanuse võrdlus ei ole raieluba ega õiguslik lõppotsus.",
+      "Raie lubatavus vajab raieliiki, metsateatist või menetlust, kaitsekorda ja vajadusel Keskkonnaameti kontrolli."
+    ]),
+    evidence: evidenceFromAnalysis(analysis),
+    evidenceIds,
+    mapHints: [],
+    followUps: [
+      "Kas kaitsekattuvus muudab seda järeldust?",
+      "Kas siin on metsateatis olemas?",
+      "Selgita raievanust lihtsamalt."
+    ],
+    sources: analysis.sources
   };
 }
 
@@ -1132,6 +1455,10 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
     evidenceIds = evidenceById(normalized, focus.evidenceIds);
   } else if (intent.asksInterpretiveSummary) {
     return interpretiveSummaryAnswer(input);
+  } else if (intent.asksTreeAge) {
+    return treeAgeAnswer(input);
+  } else if (intent.asksProtectionImpact || intent.asksCompensation) {
+    return protectionImpactAnswer(input);
   } else if (intent.asksBroadSearch) {
     verdict = "unknown";
     shortAnswer =
@@ -1191,21 +1518,46 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
         : undefined
     ]);
   } else if (intent.asksLegal) {
+    const legalTopics = forestLawTopicsForQuestion(question);
+    const topicTitles = legalTopics.map((topic) => topic.title).slice(0, 3);
     verdict = "unknown";
     evidenceIds = evidenceById(normalized, [
       "protection-summary",
       "registry-active-notices",
+      "registry-stands",
       "forest-change-proof"
     ]);
     shortAnswer =
-      "Õiguslikku lõppotsust nende andmete põhjal teha ei saa.";
-    explanation =
-      "Andmepakk näitab registri-, kaitse- ja allikaseisu. Lubatavuse või rikkumise otsus vajab menetluse, tingimuste ja ametliku kontrolli konteksti.";
-    canSay = factsFromQuickAnswer(normalized);
+      "Saan anda praktilise õigusliku riskiselgituse, aga mitte ametlikku luba, keeldu ega rikkumise otsust.";
+    explanation = [
+      hasProtection
+        ? `Andmepakis on kaitsekontekst: ${summarizeProtectionGroups(normalized)}.`
+        : "Andmepakk ei näita avalikku kaitsekattuvust.",
+      hasAnyNotice
+        ? `Metsaregistris on ${registry.activeNoticesCount} aktiivset ja ${registry.archivedNoticesCount} arhiveeritud metsateatist.`
+        : "Metsateatist ei leitud.",
+      registry.standAgeSummary
+        ? `Puistu vanuse kontekst: ${registry.standAgeSummary}`
+        : undefined,
+      topicTitles.length > 0
+        ? `Asjakohane üldraam: ${topicTitles.join("; ")}.`
+        : "Asjakohane üldraam: metsaseadus, metsa majandamise eeskiri ja vajadusel looduskaitseseadus."
+    ]
+      .filter(Boolean)
+      .join("\n");
+    canSay = uniqueRows([
+      ...factsFromQuickAnswer(normalized),
+      hasProtection
+        ? "Kaitseala või EELIS kattuvuse korral tuleb kontrollida konkreetset vööndit ja kaitse-eeskirja."
+        : undefined,
+      registry.standAgeSummary
+        ? "Vanuseandmeid saab kasutada ainult ühe sisendsignaalina, mitte loana."
+        : undefined
+    ]);
     cannotSay = uniqueRows([
-      "Ma ei anna juriidilist hinnangut ega ametlikku otsust.",
+      "Metsatark ei anna juriidilist hinnangut, lõpphinnangut ega ametlikku otsust.",
       "EELIS kattuvus ei ütle automaatselt, et tegevus on keelatud või lubatud.",
-      "Metsateatis ei kinnita üksi, et töö on tehtud.",
+      "Metsateatis ei kinnita üksi, et töö on tehtud või et kõik muud tingimused on täidetud.",
       ...limitsFromNormalized(normalized)
     ]);
   } else if (intent.asksHarvest) {
@@ -1419,8 +1771,10 @@ function compactAnalysisForAi(analysis: AnalysisResult, question: string) {
           type: "direct_answer",
           priority: "Vasta kasutaja täpsele küsimusele võimalikult otse.",
           avoid: "Ära lisa standardset kontrollnimekirja."
-        },
+    },
     conceptGlossary,
+    legalKnowledge: legalKnowledgeForAnalysis(analysis, question),
+    nationalForestContext: nationalForestContextForAi(),
     availableMapTools: areaQueryFilters.map((filter) => ({
       id: filter.id,
       label: filter.label,
@@ -1674,6 +2028,17 @@ const conversationalAnswerInstructions = [
   "Sa oled Metsatark, Eesti ametlike metsaandmete peale ehitatud praktiline andmeanalüütik.",
   "Valitud ala puudutavad faktid peavad tulema ainult sisendis olevatest väljadest selectedAreaData, queryableFacts, sourceDetails ja normalizedEvidence.",
   "Ära kasuta internetti ega jooksvaid välisandmeid.",
+  "Kui kasutaja küsib Eesti metsaõiguse, kaitseala mõju, hüvitise, raieõiguse või puude vanuse/raievanuse kohta, kasuta ainult dataPackage.legalKnowledge plokki üldise õigusraamistiku selgitamiseks.",
+  "Õigusvastustes erista alati kolm asja: mida valitud ala andmepakk näitab, milline on üldine Eesti reegli loogika legalKnowledge ploki põhjal, ja mida ei saa selle prototüübi põhjal otsustada.",
+  "Ära anna ametlikku õigusnõu, luba, keeldu, rikkumise otsust ega toetuse garantiid. Sõnasta praktilise riskiselgitusena.",
+  "Kui küsitakse 'kuidas kaitsealad mind mõjutavad', alusta praktilisest mõjust: vöönd/kaitse-eeskiri, võimalik Keskkonnaameti nõusoleku vajadus, raiepiirangute tüübid, eraomaniku hüvitise/maamaksusoodustuse kontroll. Ära alusta pindalast.",
+  "Kui küsitakse hüvitist, ütle, et see ei ole automaatne: vaja on eraomandit, toetuskõlblikku ala, õiget vööndit ja taotluse tingimusi. Ära arvuta summat, kui toetuskõlbliku ala andmeid ei ole.",
+  "Kui küsitakse puude vanust või raievanust, ära aja inventuuriaastat puude vanusega segi. Kasuta dataPackage.queryableFacts.registrySummary.standAgeSummary ning dataPackage.sourceDetails.forestRegistry.stands averageAge/averageHarvestAge välju, kui need on olemas.",
+  "Kui keskmine vanus on raievanusega võrdne või suurem, tohib öelda ainult, et vanusepoolne signaal võib olla olemas; ära ütle, et raie on lubatud ilma kaitsekorra, metsateatise ja menetluseta.",
+  "Kui kasutaja küsib suurt pilti, võrdlust või 'mida see tähendab', võid kasutada dataPackage.nationalForestContext plokki taustaks. Ütle selgelt, et see on Eesti üldstatistika, mitte valitud ala tõend.",
+  "Ole rohkem analüütik kui väljavõtte generaator: seo omavahel eraldiste arv, pindala, puuliigid, vanus, teatised, kaitsekattuvus, muutusetõend ja Eesti üldtaust. Tee ettevaatlik järeldus, kui andmed seda lubavad.",
+  "Kui muster on nõrk, sõnasta see nõrgalt: 'viitab', 'paistab', 'praktiliselt tähendab', 'järgmine kontroll oleks'. Kui muster on tugev, ütle lühidalt, miks ta tugev on.",
+  "Ära lisa vastusesse automaatselt kõiki piiranguid. Too ainult need piirid, mis muudavad konkreetse vastuse tähendust.",
   "Kui kasutaja küsib üldist metsanduse, andmeallika või kaarditermini tähendust, võid anda lihtsa üldise selgituse oma mudeliteadmiste põhjal. Erista see selgelt valitud ala kohta tõendatud faktidest.",
   "Kui kasutaja küsib valitud ala kohta ja vastust andmepakis pole, ütle seda otse.",
   "Kui kasutaja küsib mõiste tähendust, kasuta esmalt dataPackage.conceptGlossary sõnastikku ja lisa valitud ala fakte ainult siis, kui neid küsitakse.",
@@ -1892,6 +2257,28 @@ async function openAiAnswer(
     const requiredEvidence = new Set(focus.evidenceIds);
     const hasFocusEvidence = answer.evidenceIds.some((id) => requiredEvidence.has(id));
     if (!hasFocusEvidence || !exactNumberMentioned(answer, focus)) {
+      return fallback;
+    }
+  }
+
+  const intent = detectedIntent(input.question);
+  if (intent.asksTreeAge) {
+    const registry = input.analysis.normalizedEvidence.registrySummary;
+    const hasAge = (registry.standsWithAgeCount ?? 0) > 0;
+    const text = `${answer.shortAnswer}\n${answer.explanation}\n${answer.canSay.join("\n")}\n${answer.cannotSay.join("\n")}`.toLocaleLowerCase("et");
+    const mentionsAgeRange =
+      registry.standAgeMin === undefined ||
+      text.includes(String(registry.standAgeMin));
+    const mentionsHarvestAge =
+      registry.averageHarvestAgeMin === undefined ||
+      text.includes(String(registry.averageHarvestAgeMin));
+    const falselyMissingAge =
+      hasAge &&
+      (text.includes("ei ole puistu keskmise vanuse") ||
+        text.includes("ei sisalda puistu keskmist vanust") ||
+        text.includes("keskmise vanuse andmeid ei ole"));
+
+    if (falselyMissingAge || !mentionsAgeRange || !mentionsHarvestAge) {
       return fallback;
     }
   }

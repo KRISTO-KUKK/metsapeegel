@@ -47,26 +47,6 @@ const sourceShortLabels: Record<string, string> = {
   "smi-kese": "SMI/KESE"
 };
 
-const suggestionChips = [
-  "Naita kaitsekattuvuseta alasid",
-  "Naita kaitsekattuvusega alasid",
-  "Naita 2024 inventuuriga alasid",
-  "Naita riigiomandis alasid",
-  "Naita ule 100 ha alasid",
-  "Naita vahemalt 10 eraldisega alasid",
-  "Naita metsateatisega alasid",
-  "Naita puidutooraine kattuvusega alasid",
-  "Naita susiniku kattuvusega alasid",
-  "Võta kokku, mis siin tõenäoliselt toimunud on",
-  "Mis kataster üldse on?",
-  "Mis on metsateatis?",
-  "Palju on puidutooraine kattuvusi?",
-  "Kas siin on raie kohta tõendeid?",
-  "Kas see ala on kaitse all?",
-  "Mis andmed on puudu?",
-  "Selgita seda ilma metsandusterminiteta"
-];
-
 function evidenceChipLabel(item: NormalizedEvidenceItem) {
   const source = sourceShortLabels[item.sourceId] ?? item.sourceId;
   if (item.status !== "loaded") {
@@ -208,7 +188,7 @@ function AnswerMessage({
             {isRealAi ? "Metsatark AI" : "Metsatark"}
           </span>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-            andmed + mõisted
+            andmed + õigusraam
           </span>
         </div>
 
@@ -378,7 +358,7 @@ export function AssistantPanel({
           </h2>
           {analysis ? (
             <span className="ml-auto rounded-full bg-white px-2 py-1 text-[11px] text-slate-600 ring-1 ring-slate-200">
-              andmed + mõisted
+              andmed + õigusraam
             </span>
           ) : null}
           <button
@@ -448,19 +428,6 @@ export function AssistantPanel({
       </div>
 
       <div className="shrink-0 border-t border-white/70 bg-white/72 px-3 py-3 backdrop-blur">
-        <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
-          {suggestionChips.map((item) => (
-            <button
-              className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-[var(--sage-50)] disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={!analysis || isAsking}
-              key={item}
-              onClick={() => void ask(item)}
-              type="button"
-            >
-              {item}
-            </button>
-          ))}
-        </div>
         <form className="flex items-end gap-2" onSubmit={submit}>
           <textarea
             className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm leading-5 text-slate-950 outline-none placeholder:text-slate-500 focus:border-[var(--forest-600)]"

@@ -5,6 +5,10 @@ import type { Feature, Geometry } from "geojson";
 import { AnalysisPanel } from "@/components/AnalysisPanel";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { MapView } from "@/components/MapView";
+import {
+  NationalStatsButton,
+  NationalStatsPanel
+} from "@/components/NationalStatsPanel";
 import { SearchBar } from "@/components/SearchBar";
 import type { AnalysisResult } from "@/lib/types/forestry";
 
@@ -13,6 +17,7 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isNationalStatsOpen, setIsNationalStatsOpen] = useState(false);
 
   const selectArea = useCallback(async (areaId: string) => {
     setSelectedAreaId(areaId);
@@ -91,7 +96,7 @@ export default function Home() {
         }
 
         if (!response.ok) {
-          throw new Error("Metsaala pÃ¤ring ebaÃµnnestus.");
+          throw new Error("Metsaala päring ebaõnnestus.");
         }
 
         const payload = (await response.json()) as { analysis: AnalysisResult };
@@ -101,7 +106,7 @@ export default function Home() {
         setError(
           cause instanceof Error
             ? cause.message
-            : "Metsaala pÃ¤ring ebaÃµnnestus."
+            : "Metsaala päring ebaõnnestus."
         );
       } finally {
         setIsLoading(false);
@@ -139,6 +144,12 @@ export default function Home() {
         analysis={analysis}
         error={error}
         isLoading={isLoading}
+      />
+
+      <NationalStatsButton onClick={() => setIsNationalStatsOpen(true)} />
+      <NationalStatsPanel
+        isOpen={isNationalStatsOpen}
+        onClose={() => setIsNationalStatsOpen(false)}
       />
     </main>
   );

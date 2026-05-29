@@ -119,12 +119,54 @@ function buildRegistrySummary(
   const developmentClasses = countBy(
     stands.map((stand) => stringValue(stand.properties.developmentClass))
   ).slice(0, 4);
+  const standAges = stands
+    .map((stand) => numberValue(stand.properties.averageAge))
+    .filter((value): value is number => value !== undefined)
+    .sort((a, b) => a - b);
+  const averageHarvestAges = stands
+    .map((stand) => numberValue(stand.properties.averageHarvestAge))
+    .filter((value): value is number => value !== undefined)
+    .sort((a, b) => a - b);
+  const agePairs = stands
+    .map((stand) => ({
+      age: numberValue(stand.properties.averageAge),
+      harvestAge: numberValue(stand.properties.averageHarvestAge)
+    }))
+    .filter(
+      (item): item is { age: number; harvestAge: number } =>
+        item.age !== undefined && item.harvestAge !== undefined
+    );
+  const standsAtOrAboveAverageHarvestAge = agePairs.filter(
+    (item) => item.age >= item.harvestAge
+  ).length;
+  const standAgeMin = standAges[0];
+  const standAgeMax = standAges[standAges.length - 1];
+  const averageHarvestAgeMin = averageHarvestAges[0];
+  const averageHarvestAgeMax = averageHarvestAges[averageHarvestAges.length - 1];
   const inventorySummary =
     inventoryYears.length === 0
       ? "Inventuuriaastat andmetes ei leitud."
       : inventoryYears.length === 1
         ? `${inventoryYears[0]}: ${stands.length} eraldise inventuuriandmed.`
         : `${oldestInventoryYear}-${newestInventoryYear}: ${stands.length} eraldise inventuuriandmed.`;
+  const standAgeSummary =
+    standAges.length === 0
+      ? "Puistu keskmist vanust andmetes ei leitud."
+      : [
+          standAgeMin === standAgeMax
+            ? `Puistute keskmine vanus: ${standAgeMin} a.`
+            : `Puistute keskmine vanus: ${standAgeMin}-${standAgeMax} a.`,
+          averageHarvestAges.length > 0
+            ? averageHarvestAgeMin === averageHarvestAgeMax
+              ? `Keskmine raievanus andmetes: ${averageHarvestAgeMin} a.`
+              : `Keskmine raievanus andmetes: ${averageHarvestAgeMin}-${averageHarvestAgeMax} a.`
+            : "Keskmist raievanust andmetes ei leitud.",
+          agePairs.length > 0
+            ? `${standsAtOrAboveAverageHarvestAge}/${agePairs.length} eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.`
+            : undefined
+        ]
+          .filter(Boolean)
+          .join(" ");
 
   return {
     standsCount: stands.length,
@@ -137,7 +179,15 @@ function buildRegistrySummary(
     oldestInventoryYear,
     newestInventoryYear,
     veryOldInventory,
-    inventorySummary
+    inventorySummary,
+    standAgeSummary,
+    standAgeMin,
+    standAgeMax,
+    averageHarvestAgeMin,
+    averageHarvestAgeMax,
+    standsWithAgeCount: standAges.length,
+    standsWithHarvestAgeCount: averageHarvestAges.length,
+    standsAtOrAboveAverageHarvestAge
   };
 }
 
@@ -567,7 +617,7 @@ export function normalizeSelectedAreaEvidence({
       label: "Metsaregistri eraldised",
       summary:
         registrySummary.standsCount > 0
-          ? `${registrySummary.standsCount} eraldist; ${registrySummary.inventorySummary}`
+          ? `${registrySummary.standsCount} eraldist; ${registrySummary.inventorySummary} ${registrySummary.standAgeSummary ?? ""}`.trim()
           : "Eraldisi ei leitud.",
       status: pkg.forestRegistry.sourceStatus,
       tone: registrySummary.veryOldInventory ? "attention" : sourceTone(pkg.forestRegistry.sourceStatus),

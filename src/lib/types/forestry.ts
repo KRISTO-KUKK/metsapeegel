@@ -29,6 +29,10 @@ export type ForestStand = {
   developmentClass?: string;
   siteType?: string;
   inventoryYear?: number;
+  averageAge?: number;
+  averageHarvestAge?: number;
+  heightM?: number;
+  bonitetClass?: string;
   registryStage?: string;
   areaHa: number;
   geometry: Geometry;
@@ -402,6 +406,14 @@ export type NormalizedRegistrySummary = {
   newestInventoryYear?: number;
   veryOldInventory: boolean;
   inventorySummary: string;
+  standAgeSummary?: string;
+  standAgeMin?: number;
+  standAgeMax?: number;
+  averageHarvestAgeMin?: number;
+  averageHarvestAgeMax?: number;
+  standsWithAgeCount?: number;
+  standsWithHarvestAgeCount?: number;
+  standsAtOrAboveAverageHarvestAge?: number;
 };
 
 export type NormalizedEcosystemContext = {

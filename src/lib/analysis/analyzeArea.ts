@@ -1,5 +1,6 @@
 import type { SatelliteSignal } from "@/lib/data/DataProvider";
 import type { DataProvider } from "@/lib/data/DataProvider";
+import { bbox as turfBbox } from "@turf/turf";
 import { realDataProvider } from "@/lib/data/RealDataProvider";
 import {
   calculateConfidence,
@@ -58,6 +59,151 @@ const analysisCache = new Map<
   string,
   { expiresAt: number; value: AnalysisResult }
 >();
+
+const etakWfsUrl = "https://gsavalik.envir.ee/geoserver/etak/wfs";
+const etakLayer = "etak:e_305_puittaimestik_a";
+const eelisWfsUrl = "https://gsavalik.envir.ee/geoserver/eelis/ows";
+const eelisLayers = [
+  "eelis:kr_kaitseala",
+  "eelis:kr_hoiuala",
+  "eelis:kr_linnuala",
+  "eelis:kr_loodusala",
+  "eelis:kr_piirang",
+  "eelis:kr_vep",
+  "eelis:natura_elupaik"
+];
+const elmeWfsUrl = "https://elmegs.envir.ee/geoserver/elme/ows";
+const elmeLayers = [
+  "elme:puidu_sortimendid_kogus_hind_2022",
+  "elme:metsapuiducvaru_2020",
+  "elme:puitsoost_2020",
+  "elme:puitparandniidult_2020"
+];
+
+function geometryBbox(area: Area, padding = 0.0005) {
+  const [west, south, east, north] = turfBbox({
+    type: "Feature",
+    properties: {},
+    geometry: area.geometry
+  });
+
+  return [
+    west - padding,
+    south - padding,
+    east + padding,
+    north + padding,
+    "EPSG:4326"
+  ].join(",");
+}
+
+function wfsUrl({
+  baseUrl,
+  typeNames,
+  count = 100,
+  bbox,
+  cqlFilter
+}: {
+  baseUrl: string;
+  typeNames: string | string[];
+  count?: number;
+  bbox?: string;
+  cqlFilter?: string;
+}) {
+  const url = new URL(baseUrl);
+  const params = new URLSearchParams({
+    SERVICE: "WFS",
+    VERSION: "2.0.0",
+    REQUEST: "GetFeature",
+    TYPENAMES: Array.isArray(typeNames) ? typeNames.join(",") : typeNames,
+    COUNT: String(count),
+    SRSNAME: "EPSG:4326",
+    OUTPUTFORMAT: "application/json"
+  });
+
+  if (bbox) {
+    params.set("BBOX", bbox);
+  }
+
+  if (cqlFilter) {
+    params.set("CQL_FILTER", cqlFilter);
+  }
+
+  url.search = params.toString();
+  return url.toString();
+}
+
+function cadastreSourceUrl(cadastralId?: string) {
+  return cadastralId
+    ? `https://ky.kataster.ee/ky/${encodeURIComponent(cadastralId)}`
+    : "https://ky.kataster.ee/";
+}
+
+function etakSourceUrl(area: Area) {
+  if (area.type === "parcel") {
+    return cadastreSourceUrl(area.cadastralId);
+  }
+
+  if (area.etakId) {
+    return wfsUrl({
+      baseUrl: etakWfsUrl,
+      typeNames: etakLayer,
+      count: 1,
+      cqlFilter: `etak_id=${area.etakId}`
+    });
+  }
+
+  return wfsUrl({
+    baseUrl: etakWfsUrl,
+    typeNames: etakLayer,
+    count: 25,
+    bbox: geometryBbox(area)
+  });
+}
+
+function metsaregisterSourceUrl(cadastralId?: string) {
+  if (!cadastralId) {
+    return "https://register.metsad.ee/otsiEraldis";
+  }
+
+  const url = new URL("https://register.metsad.ee/portaal/api/rest/eraldis/puu");
+  url.searchParams.set("katastriNr", cadastralId);
+  return url.toString();
+}
+
+function layerFromOverlapId(id: string, allowedLayers: string[]) {
+  const layer = allowedLayers.find((candidate) => id.startsWith(`${candidate}-`));
+  return layer;
+}
+
+function eelisSourceUrl(area: Area, protectedAreas: ProtectedArea[]) {
+  const layer =
+    protectedAreas
+      .map((item) => layerFromOverlapId(item.id, eelisLayers))
+      .find((item): item is string => Boolean(item)) ?? eelisLayers[0];
+
+  return wfsUrl({
+    baseUrl: eelisWfsUrl,
+    typeNames: layer,
+    count: 100,
+    bbox: geometryBbox(area)
+  });
+}
+
+function elmeSourceUrl(area: Area, ecosystemBenefits: EcosystemBenefit[]) {
+  const layer =
+    ecosystemBenefits
+      .map((item) =>
+        elmeLayers.includes(item.layerName) ? item.layerName : undefined
+      )
+      .find((item): item is string => Boolean(item)) ?? elmeLayers[0];
+
+  return wfsUrl({
+    baseUrl: elmeWfsUrl,
+    typeNames: layer,
+    count: 100,
+    bbox: geometryBbox(area)
+  });
+}
 const partialAnalysisResults = new WeakSet<AnalysisResult>();
 
 function analysisCacheKeys(area: Area) {
@@ -152,6 +298,12 @@ function buildEvidence({
         stand.mainSpecies ? `Peamine puuliik: ${stand.mainSpecies}.` : null,
         stand.developmentClass ? `Arenguklass: ${stand.developmentClass}.` : null,
         stand.siteType ? `Kasvukohatüüp: ${stand.siteType}.` : null,
+        stand.averageAge !== undefined
+          ? `Puistu keskmine vanus: ${stand.averageAge} a.`
+          : null,
+        stand.averageHarvestAge !== undefined
+          ? `Keskmine raievanus: ${stand.averageHarvestAge} a.`
+          : null,
         stand.inventoryYear
           ? `Inventuuriaasta: ${stand.inventoryYear}.`
           : "Inventuuriaasta puudub."
@@ -419,6 +571,10 @@ function standOverlap(stand: ForestStand, area: Area): SpatialOverlap {
       developmentClass: stand.developmentClass,
       siteType: stand.siteType,
       inventoryYear: stand.inventoryYear,
+      averageAge: stand.averageAge,
+      averageHarvestAge: stand.averageHarvestAge,
+      heightM: stand.heightM,
+      bonitetClass: stand.bonitetClass,
       registryStage: stand.registryStage,
       areaHa: stand.areaHa
     }
@@ -518,10 +674,7 @@ function buildEvidenceSources({
           ? "Valitud katastriüksuse geomeetria"
           : "ETAK metsaala",
       provider: "Maa- ja Ruumiamet",
-      url:
-        area.type === "parcel"
-          ? "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine"
-          : "https://geoportaal.maaamet.ee/est/Ruumiandmed/Eesti-topograafia-andmekogu-p79.html",
+      url: etakSourceUrl(area),
       retrievedAt,
       status: "loaded",
       warning:
@@ -533,7 +686,7 @@ function buildEvidenceSources({
       id: "maaamet-cadastre",
       name: "Katastriüksuse kontekst",
       provider: "Maa- ja Ruumiamet",
-      url: "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine",
+      url: cadastreSourceUrl(area.cadastralId),
       retrievedAt,
       status: area.cadastralId ? "loaded" : "missing",
       warning: area.cadastralId
@@ -544,7 +697,7 @@ function buildEvidenceSources({
       id: "metsaregister",
       name: "Metsaregister",
       provider: "Kliimaministeerium / Metsaregister",
-      url: "https://geoportaal.maaamet.ee/est/kaardirakendused/metsaregister/metsaregistri-kaardirakenduse-kirjeldus-p966.html",
+      url: metsaregisterSourceUrl(area.cadastralId),
       retrievedAt,
       status: stands.length > 0 || notices.length > 0 ? "loaded" : "missing",
       warning:
@@ -556,7 +709,7 @@ function buildEvidenceSources({
       id: "eelis",
       name: "EELIS kaitse- ja piiranguandmed",
       provider: "Keskkonnaagentuur",
-      url: "https://keskkonnaportaal.ee/et/ruumiandmete-teenused-ja-eelise-kasutamine",
+      url: eelisSourceUrl(area, protectedAreas),
       retrievedAt,
       status: protectedAreas.length > 0 ? "loaded" : "missing",
       warning:
@@ -568,7 +721,7 @@ function buildEvidenceSources({
       id: "elme",
       name: "Looduse hüvede / ELME kihid",
       provider: "Keskkonnaagentuur / Keskkonnaportaal",
-      url: "https://elmegs.envir.ee/geoserver/elme/ows?service=WFS&version=2.0.0&request=GetCapabilities",
+      url: elmeSourceUrl(area, ecosystemBenefits),
       retrievedAt,
       status: ecosystemBenefits.length > 0 ? "loaded" : "missing",
       warning:
@@ -697,10 +850,7 @@ function buildDataCatalog({
       scope: "selected_area",
       priority: "critical",
       status: "loaded",
-      url:
-        area.type === "parcel"
-          ? "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine"
-          : "https://geoportaal.maaamet.ee/est/Ruumiandmed/Eesti-topograafia-andmekogu-p79.html",
+      url: etakSourceUrl(area),
       description:
         area.type === "parcel"
           ? "Valitud katastriüksuse geomeetria ja pindala."
@@ -719,7 +869,7 @@ function buildDataCatalog({
       scope: "selected_area",
       priority: "high",
       status: area.cadastralId ? "loaded" : "missing",
-      url: "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine",
+      url: cadastreSourceUrl(area.cadastralId),
       description: "Katastritunnus, avalik omandivorm, sihtotstarve ja kinnistu kontekst.",
       aiUse: "Vastab omandi vormi ja katastri tausta küsimustele ilma isikuandmeid avaldamata.",
       userVisibility: "always",
@@ -732,7 +882,7 @@ function buildDataCatalog({
       scope: "selected_area",
       priority: "critical",
       status: stands.length > 0 || notices.length > 0 ? "loaded" : "missing",
-      url: "https://geoportaal.maaamet.ee/est/kaardirakendused/metsaregister/metsaregistri-kaardirakenduse-kirjeldus-p966.html",
+      url: metsaregisterSourceUrl(area.cadastralId),
       description: "Metsainventeerimise eraldised, puistu omadused ja avalikud metsateatised.",
       aiUse: "Põhiallikas puuliigi, inventuuriaasta, arenguklassi ja teatise küsimustes.",
       userVisibility: "always",
@@ -759,7 +909,7 @@ function buildDataCatalog({
       scope: "spatial_context",
       priority: "high",
       status: protectedAreas.length > 0 ? "loaded" : "missing",
-      url: "https://keskkonnaportaal.ee/et/ruumiandmete-teenused-ja-eelise-kasutamine",
+      url: eelisSourceUrl(area, protectedAreas),
       description: "Kaitsealade, piirangute, Natura alade ja vääriselupaikade avalikud kattuvused.",
       aiUse: "Selgitab, kas ala puhul peab kasutajale näitama looduskaitselist konteksti.",
       userVisibility: protectedAreas.length > 0 ? "always" : "when_relevant",
@@ -786,7 +936,7 @@ function buildDataCatalog({
       scope: "spatial_context",
       priority: "medium",
       status: ecosystemBenefits.length > 0 ? "loaded" : "missing",
-      url: "https://elmegs.envir.ee/geoserver/elme/ows?service=WFS&version=2.0.0&request=GetCapabilities",
+      url: elmeSourceUrl(area, ecosystemBenefits),
       description: "Puidutooraine potentsiaali, väärtuse ja metsa biomassi süsiniku kaardikihid.",
       aiUse: "Annab kasutajale majandusliku ja ökosüsteemse taustakonteksti pärast põhifaktide näitamist.",
       userVisibility: ecosystemBenefits.length > 0 ? "when_relevant" : "advanced",

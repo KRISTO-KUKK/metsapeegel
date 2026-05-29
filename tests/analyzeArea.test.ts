@@ -28,6 +28,7 @@ const area: Area = {
   name: "Test forest",
   type: "forest",
   cadastralId: "29202:005:0601",
+  etakId: 12345,
   areaHa: 1,
   geometry
 };
@@ -203,5 +204,29 @@ describe("analyzeArea", () => {
     expect(result.status).toBe("no_major_change");
     expect(result.confidenceScore).toBeGreaterThanOrEqual(75);
     expect(result.publicAudit.disclosureRecommendation.level).toBe("public_ok");
+  });
+
+  it("builds source links that point at the selected area", async () => {
+    const result = await analyzeArea(
+      area.id,
+      providerFor({ stands: [freshStand] })
+    );
+    const source = (id: string) =>
+      result.normalizedEvidence.sourceStatus.find((item) => item.id === id);
+
+    expect(source("maaamet-cadastre")?.url).toBe(
+      "https://ky.kataster.ee/ky/29202%3A005%3A0601"
+    );
+    expect(source("metsaregister")?.url).toBe(
+      "https://register.metsad.ee/portaal/api/rest/eraldis/puu?katastriNr=29202%3A005%3A0601"
+    );
+    expect(source("maaamet-etak-forest")?.url).toContain(
+      "CQL_FILTER=etak_id%3D12345"
+    );
+    expect(source("eelis")?.url).toContain("TYPENAMES=eelis%3Akr_kaitseala");
+    expect(source("eelis")?.url).toContain("BBOX=24.8795");
+    expect(source("elme")?.url).toContain(
+      "TYPENAMES=elme%3Apuidu_sortimendid_kogus_hind_2022"
+    );
   });
 });
