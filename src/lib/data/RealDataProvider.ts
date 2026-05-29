@@ -17,6 +17,8 @@ import { getGeometryCenter } from "@/lib/geo/centroid";
 import { geometriesOverlap } from "@/lib/geo/overlap";
 import type {
   Area,
+  EcosystemBenefit,
+  EcosystemBenefitCategory,
   ForestChange,
   ForestNotice,
   ForestStand,
@@ -35,9 +37,19 @@ type EelisLayerConfig = {
   type: ProtectedArea["type"];
 };
 
+type ElmeLayerConfig = {
+  layer: string;
+  sourceId: string;
+  title: string;
+  category: EcosystemBenefitCategory;
+  valueFields: string[];
+  dataYear: number;
+};
+
 const metsaregisterBaseUrl = "https://register.metsad.ee/portaal/api/rest";
 const cadastreWfsUrl = "https://gsavalik.envir.ee/geoserver/kataster/wfs";
 const eelisWfsUrl = "https://gsavalik.envir.ee/geoserver/eelis/ows";
+const elmeWfsUrl = "https://elmegs.envir.ee/geoserver/elme/ows";
 const cadastreLayer = "kataster:ky_kehtiv";
 const requestTimeoutMs = 12000;
 const cadastralIdPattern = /^\d{5}:\d{3}:\d{4}$/;
@@ -80,6 +92,41 @@ const eelisLayers: EelisLayerConfig[] = [
   }
 ];
 
+const elmeLayers: ElmeLayerConfig[] = [
+  {
+    layer: "elme:puidu_sortimendid_kogus_hind_2022",
+    sourceId: "elme",
+    title: "Puidutooraine hüve koguhind",
+    category: "wood_raw_material",
+    valueFields: ["keskm_sum_5a", "keskm_abs_hind_5a", "pindala_ha"],
+    dataYear: 2022
+  },
+  {
+    layer: "elme:metsapuiducvaru_2020",
+    sourceId: "elme",
+    title: "Metsa puitsesse biomassi seotud süsiniku varu",
+    category: "carbon_storage",
+    valueFields: ["puit_c_tha"],
+    dataYear: 2020
+  },
+  {
+    layer: "elme:puitsoost_2020",
+    sourceId: "elme",
+    title: "Soodelt saadava puidutooraine potentsiaal",
+    category: "wood_context",
+    valueFields: ["puit_tm_ha"],
+    dataYear: 2020
+  },
+  {
+    layer: "elme:puitparandniidult_2020",
+    sourceId: "elme",
+    title: "Pärandniitudelt saadava puidutooraine kogupotentsiaal",
+    category: "wood_context",
+    valueFields: ["puidutooraine_klass", "puit_tm_ha"],
+    dataYear: 2020
+  }
+];
+
 proj4.defs(
   "EPSG:3301",
   "+proj=lcc +lat_1=59.33333333333334 +lat_2=58 +lat_0=57.51755393055556 +lon_0=24 +x_0=500000 +y_0=6375000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +axis=neu +no_defs"
@@ -119,6 +166,14 @@ function codeValue(value: unknown): string | undefined {
 
 function roundHa(squareMeters: number): number {
   return Math.round((squareMeters / 10000) * 100) / 100;
+}
+
+function overlapPercentOfArea(overlapHa: number | undefined, areaHa?: number) {
+  if (overlapHa === undefined || !areaHa || areaHa <= 0) {
+    return undefined;
+  }
+
+  return Math.round((overlapHa / areaHa) * 1000) / 10;
 }
 
 function yearFromEpoch(value: unknown): number | undefined {
@@ -615,6 +670,143 @@ function protectedAreaFromFeature(
   };
 }
 
+function numericLikeValue(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.replace(",", ".").replace(/[^\d.-]/g, "");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function primitiveValue(value: unknown) {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    value === null
+  );
+}
+
+function compactLayerProperties(
+  properties: JsonObject,
+  preferredFields: string[]
+): JsonObject {
+  const result: JsonObject = {};
+  const preferred = [
+    "kataster",
+    "katastritunnus",
+    "id",
+    "fid",
+    ...preferredFields
+  ];
+
+  for (const key of preferred) {
+    if (key in properties && primitiveValue(properties[key])) {
+      result[key] = properties[key];
+    }
+  }
+
+  for (const [key, value] of Object.entries(properties)) {
+    if (Object.keys(result).length >= 14) {
+      break;
+    }
+
+    if (!(key in result) && primitiveValue(value)) {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+function formatNumber(value: number) {
+  return Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
+}
+
+function valueLabelFromElme(
+  properties: JsonObject,
+  layerConfig: ElmeLayerConfig
+): string | undefined {
+  if (layerConfig.layer === "elme:puidu_sortimendid_kogus_hind_2022") {
+    const eurPerHa = numericLikeValue(properties.keskm_sum_5a);
+    const total = numericLikeValue(properties.keskm_abs_hind_5a);
+
+    if (eurPerHa !== undefined && total !== undefined) {
+      return `${formatNumber(eurPerHa)} eur/ha, kokku ${formatNumber(total)} eur`;
+    }
+
+    if (eurPerHa !== undefined) {
+      return `${formatNumber(eurPerHa)} eur/ha`;
+    }
+  }
+
+  if (layerConfig.layer === "elme:metsapuiducvaru_2020") {
+    const carbon = numericLikeValue(properties.puit_c_tha);
+    return carbon !== undefined ? `${formatNumber(carbon)} t C/ha` : undefined;
+  }
+
+  if ("puit_tm_ha" in properties) {
+    const timber = properties.puit_tm_ha;
+    if (typeof timber === "string" && timber.trim()) {
+      return timber;
+    }
+
+    const numericTimber = numericLikeValue(timber);
+    return numericTimber !== undefined
+      ? `${formatNumber(numericTimber)} tm/ha`
+      : undefined;
+  }
+
+  return undefined;
+}
+
+function ecosystemBenefitFromFeature(
+  feature: WfsFeature,
+  layerConfig: ElmeLayerConfig,
+  areaGeometry: Geometry,
+  selectedAreaHa?: number
+): EcosystemBenefit | null {
+  if (!feature.geometry || !geometriesOverlap(areaGeometry, feature.geometry)) {
+    return null;
+  }
+
+  const properties = feature.properties;
+  const compactProperties = compactLayerProperties(
+    properties,
+    layerConfig.valueFields
+  );
+  const code =
+    stringValue(properties.kataster) ??
+    stringValue(feature.id) ??
+    codeValue(properties.id) ??
+    codeValue(properties.fid) ??
+    crypto.randomUUID();
+  const overlapHa = protectedOverlapHa(
+    areaGeometry,
+    feature.geometry,
+    selectedAreaHa
+  );
+
+  return {
+    id: `${layerConfig.layer}-${code}`,
+    sourceId: layerConfig.sourceId,
+    layerName: layerConfig.layer,
+    category: layerConfig.category,
+    title: layerConfig.title,
+    valueLabel: valueLabelFromElme(properties, layerConfig),
+    dataYear: layerConfig.dataYear,
+    overlapAreaHa: overlapHa > 0 ? overlapHa : undefined,
+    overlapPercentOfSelectedArea: overlapPercentOfArea(overlapHa, selectedAreaHa),
+    properties: compactProperties
+  };
+}
+
 export class RealDataProvider implements DataProvider {
   async searchAreas(query: string): Promise<SearchResult[]> {
     const normalizedQuery = query.trim();
@@ -778,6 +970,48 @@ export class RealDataProvider implements DataProvider {
     }
 
     return Array.from(byId.values()).slice(0, 40);
+  }
+
+  async getEcosystemBenefits(
+    areaGeometry: Geometry,
+    _areaId?: string,
+    area?: Area
+  ): Promise<EcosystemBenefit[]> {
+    const bbox = bboxForGeometry(areaGeometry);
+    const layerResults = await Promise.all(
+      elmeLayers.map(async (layerConfig) => {
+        try {
+          const collection = await fetchWfs({
+            baseUrl: elmeWfsUrl,
+            typeNames: layerConfig.layer,
+            bbox,
+            count: 80
+          });
+
+          return collection.features
+            .map((feature) =>
+              ecosystemBenefitFromFeature(
+                feature,
+                layerConfig,
+                areaGeometry,
+                area?.areaHa
+              )
+            )
+            .filter((item): item is EcosystemBenefit => Boolean(item));
+        } catch {
+          return [];
+        }
+      })
+    );
+    const byId = new Map<string, EcosystemBenefit>();
+
+    for (const item of layerResults.flat()) {
+      if (!byId.has(item.id)) {
+        byId.set(item.id, item);
+      }
+    }
+
+    return Array.from(byId.values()).slice(0, 80);
   }
 
   async getSatelliteSignal(_areaId: string): Promise<SatelliteSignal | null> {

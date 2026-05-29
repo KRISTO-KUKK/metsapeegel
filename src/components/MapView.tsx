@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { bbox } from "@turf/turf";
+import { Layers, LocateFixed, RotateCcw } from "lucide-react";
 import maplibregl, { GeoJSONSource } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import countiesGeojson from "@/data/official/counties.geojson";
@@ -14,26 +15,42 @@ type Props = {
 };
 
 type GeoCollection = FeatureCollection<Geometry, Record<string, unknown>>;
+type LayerVisibility = {
+  cadastre: boolean;
+  protection: boolean;
+  registry: boolean;
+};
 
 const emptyCollection: GeoCollection = {
   type: "FeatureCollection",
   features: []
 };
 
-const maaametBasicMapTile =
-  "https://kaart.maaamet.ee/wms/alus-geo?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=pohi_vr2&STYLES=&FORMAT=image/png&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}";
+const maaametBaseTile =
+  "https://kaart.maaamet.ee/wms/alus-geo?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=pohi_mvr2&STYLES=&FORMAT=image/png&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}";
+
+const maaametHybridTile =
+  "https://kaart.maaamet.ee/wms/alus-geo?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=HYBRID&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}";
 
 const maaametForestTile =
+  "https://kaart.maaamet.ee/wms/alus-geo?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=mets_1&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}";
+
+const maaametForestDetailTile =
   "https://kaart.maaamet.ee/wms/alus-geo?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=BK_METS&STYLES=&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}";
-
-const etakForestSld =
-  '<StyledLayerDescriptor version="1.0.0" xmlns="http://www.opengis.net/sld" xmlns:ogc="http://www.opengis.net/ogc"><NamedLayer><Name>etak:e_305_puittaimestik_a</Name><UserStyle><FeatureTypeStyle><Rule><PolygonSymbolizer><Fill><CssParameter name="fill">#16a34a</CssParameter><CssParameter name="fill-opacity">0.82</CssParameter></Fill><Stroke><CssParameter name="stroke">#064e3b</CssParameter><CssParameter name="stroke-opacity">0.55</CssParameter><CssParameter name="stroke-width">0.4</CssParameter></Stroke></PolygonSymbolizer></Rule></FeatureTypeStyle></UserStyle></NamedLayer></StyledLayerDescriptor>';
-
-const etakForestTile =
-  `https://gsavalik.envir.ee/geoserver/etak/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=etak:e_305_puittaimestik_a&STYLES=&CQL_FILTER=tyyp_tekst%3D%27Mets%27&SLD_BODY=${encodeURIComponent(etakForestSld)}&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`;
 
 const cadastralBoundaryTile =
   "https://gsavalik.envir.ee/geoserver/kataster/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=ky_kehtiv&STYLES=ky_kehtiv_tunnuseta&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}";
+
+const estoniaBounds: [[number, number], [number, number]] = [
+  [21.55, 57.2],
+  [28.45, 59.78]
+];
+
+const defaultLayerVisibility: LayerVisibility = {
+  cadastre: false,
+  protection: false,
+  registry: false
+};
 
 function asGeoCollection(value: unknown): GeoCollection {
   return value as GeoCollection;
@@ -107,6 +124,31 @@ function setGeojsonSource(
   source?.setData(data);
 }
 
+function setLayerVisibility(
+  map: maplibregl.Map,
+  layerIds: string[],
+  isVisible: boolean
+) {
+  const visibility = isVisible ? "visible" : "none";
+  for (const layerId of layerIds) {
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, "visibility", visibility);
+    }
+  }
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function selectedForestColor(_analysis: AnalysisResult | null): string {
+  return "#16a34a";
+}
+
 export function MapView({
   analysis,
   selectedAreaId,
@@ -114,6 +156,43 @@ export function MapView({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const [visibleLayers, setVisibleLayers] = useState<LayerVisibility>(
+    defaultLayerVisibility
+  );
+
+  const fitEstonia = useCallback((duration = 650) => {
+    mapRef.current?.fitBounds(estoniaBounds, {
+      padding: { top: 120, right: 80, bottom: 60, left: 80 },
+      duration
+    });
+  }, []);
+
+  const zoomToSelected = useCallback(() => {
+    const map = mapRef.current;
+    const selectedFeature = selectedAreaFeature(selectedAreaId, analysis);
+    if (!map || !selectedFeature) {
+      return;
+    }
+
+    const bounds = bbox(selectedFeature);
+    const isDesktop = window.innerWidth >= 920;
+    map.fitBounds(
+      [
+        [bounds[0], bounds[1]],
+        [bounds[2], bounds[3]]
+      ],
+      {
+        padding: {
+          top: 130,
+          right: isDesktop ? 520 : 70,
+          bottom: isDesktop ? 80 : 360,
+          left: isDesktop ? 470 : 70
+        },
+        maxZoom: 10.8,
+        duration: 700
+      }
+    );
+  }, [analysis, selectedAreaId]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) {
@@ -124,9 +203,13 @@ export function MapView({
       container: containerRef.current,
       attributionControl: false,
       center: [25.25, 58.62],
-      zoom: 6.3,
+      zoom: 6.45,
       minZoom: 5.2,
       maxZoom: 12,
+      maxBounds: [
+        [20.7, 56.75],
+        [29.8, 60.45]
+      ],
       style: {
         version: 8,
         sources: {},
@@ -135,7 +218,7 @@ export function MapView({
             id: "background",
             type: "background",
             paint: {
-              "background-color": "#eefaf0"
+              "background-color": "#d9e8d2"
             }
           }
         ]
@@ -143,11 +226,66 @@ export function MapView({
     });
 
     mapRef.current = map;
+    map.getCanvas().style.cursor = "grab";
+
+    let visibleForestAbort: AbortController | null = null;
+    let visibleForestTimer: number | null = null;
+
+    function scheduleVisibleForestLoad() {
+      if (visibleForestTimer) {
+        window.clearTimeout(visibleForestTimer);
+      }
+
+      visibleForestTimer = window.setTimeout(async () => {
+        if (!map.getSource("etak-forest-preview")) {
+          return;
+        }
+
+        const zoom = map.getZoom();
+        visibleForestAbort?.abort();
+        visibleForestAbort = new AbortController();
+
+        const bounds = map.getBounds();
+        const requestBbox = [
+          bounds.getWest(),
+          bounds.getSouth(),
+          bounds.getEast(),
+          bounds.getNorth()
+        ]
+          .map((coordinate) => coordinate.toFixed(6))
+          .join(",");
+
+        const count = zoom < 7.2 ? 1800 : zoom < 8.8 ? 1200 : 700;
+
+        try {
+          const response = await fetch(
+            `/api/forests-bbox?bbox=${encodeURIComponent(requestBbox)}&count=${count}`,
+            { signal: visibleForestAbort.signal }
+          );
+          if (!response.ok) {
+            throw new Error("Visible ETAK forest load failed.");
+          }
+
+          const data = (await response.json()) as GeoCollection;
+          setGeojsonSource(map, "etak-forest-preview", data);
+        } catch (cause) {
+          if (cause instanceof DOMException && cause.name === "AbortError") {
+            return;
+          }
+        }
+      }, 280);
+    }
 
     map.on("load", () => {
-      map.addSource("maaamet-basic-map", {
+      map.addSource("maaamet-base-map", {
         type: "raster",
-        tiles: [maaametBasicMapTile],
+        tiles: [maaametBaseTile],
+        tileSize: 256,
+        attribution: "Maa- ja Ruumiamet"
+      });
+      map.addSource("maaamet-hybrid-labels", {
+        type: "raster",
+        tiles: [maaametHybridTile],
         tileSize: 256,
         attribution: "Maa- ja Ruumiamet"
       });
@@ -157,11 +295,11 @@ export function MapView({
         tileSize: 256,
         attribution: "Maa- ja Ruumiamet"
       });
-      map.addSource("etak-forests", {
+      map.addSource("maaamet-forest-detail", {
         type: "raster",
-        tiles: [etakForestTile],
+        tiles: [maaametForestDetailTile],
         tileSize: 256,
-        attribution: "Maa- ja Ruumiamet ETAK"
+        attribution: "Maa- ja Ruumiamet"
       });
       map.addSource("cadastral-boundaries", {
         type: "raster",
@@ -173,6 +311,10 @@ export function MapView({
         type: "geojson",
         data: asGeoCollection(countiesGeojson),
         promoteId: "id"
+      });
+      map.addSource("etak-forest-preview", {
+        type: "geojson",
+        data: emptyCollection
       });
       map.addSource("metsaregister-stands", {
         type: "geojson",
@@ -192,15 +334,15 @@ export function MapView({
       });
 
       map.addLayer({
-        id: "maaamet-basic-map",
+        id: "maaamet-base-map",
         type: "raster",
-        source: "maaamet-basic-map",
+        source: "maaamet-base-map",
         paint: {
-          "raster-opacity": 0.58,
-          "raster-saturation": -0.28,
-          "raster-contrast": -0.12,
-          "raster-brightness-max": 0.98,
-          "raster-brightness-min": 0.08
+          "raster-opacity": 0.56,
+          "raster-saturation": -0.65,
+          "raster-contrast": -0.22,
+          "raster-brightness-max": 1,
+          "raster-brightness-min": 0.12
         }
       });
 
@@ -209,22 +351,34 @@ export function MapView({
         type: "raster",
         source: "maaamet-forest-cover",
         paint: {
-          "raster-opacity": 0.34,
-          "raster-saturation": 0.45,
-          "raster-contrast": 0.24
+          "raster-opacity": 0.25,
+          "raster-saturation": -0.28,
+          "raster-contrast": 0.02
         }
       });
 
       map.addLayer({
-        id: "etak-forests",
+        id: "maaamet-forest-detail",
         type: "raster",
-        source: "etak-forests",
+        source: "maaamet-forest-detail",
+        minzoom: 8.2,
         paint: {
-          "raster-opacity": 0.82,
-          "raster-saturation": 0.55,
-          "raster-contrast": 0.2,
-          "raster-brightness-min": 0.03,
-          "raster-brightness-max": 0.98
+          "raster-opacity": 0.22,
+          "raster-saturation": -0.35,
+          "raster-contrast": 0.02
+        }
+      });
+
+      map.addLayer({
+        id: "maaamet-hybrid-labels",
+        type: "raster",
+        source: "maaamet-hybrid-labels",
+        paint: {
+          "raster-opacity": 0.48,
+          "raster-saturation": -0.52,
+          "raster-contrast": -0.02,
+          "raster-brightness-max": 0.96,
+          "raster-brightness-min": 0.02
         }
       });
 
@@ -244,8 +398,45 @@ export function MapView({
         source: "counties",
         paint: {
           "line-color": "#2f6b3c",
-          "line-opacity": 0.76,
-          "line-width": 1.25
+          "line-opacity": 0.28,
+          "line-width": 1
+        }
+      });
+
+      map.addLayer({
+        id: "etak-forest-preview-fill",
+        type: "fill",
+        source: "etak-forest-preview",
+        paint: {
+          "fill-color": "#1f7a3a",
+          "fill-opacity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            7,
+            0.34,
+            10,
+            0.46
+          ]
+        }
+      });
+
+      map.addLayer({
+        id: "etak-forest-preview-line",
+        type: "line",
+        source: "etak-forest-preview",
+        paint: {
+          "line-color": "#0b3d22",
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            7,
+            0.6,
+            11,
+            1.4
+          ],
+          "line-opacity": 0.72
         }
       });
 
@@ -254,6 +445,9 @@ export function MapView({
         type: "raster",
         source: "cadastral-boundaries",
         minzoom: 9,
+        layout: {
+          visibility: "none"
+        },
         paint: {
           "raster-opacity": 0.7
         }
@@ -263,9 +457,26 @@ export function MapView({
         id: "protected-fill",
         type: "fill",
         source: "protected-areas",
+        layout: {
+          visibility: "none"
+        },
         paint: {
           "fill-color": "#2563eb",
-          "fill-opacity": 0.18
+          "fill-opacity": 0.025
+        }
+      });
+
+      map.addLayer({
+        id: "protected-line",
+        type: "line",
+        source: "protected-areas",
+        layout: {
+          visibility: "none"
+        },
+        paint: {
+          "line-color": "#1d4ed8",
+          "line-width": 1.4,
+          "line-opacity": 0.28
         }
       });
 
@@ -273,9 +484,12 @@ export function MapView({
         id: "metsaregister-stands-fill",
         type: "fill",
         source: "metsaregister-stands",
+        layout: {
+          visibility: "none"
+        },
         paint: {
-          "fill-color": "#facc15",
-          "fill-opacity": 0.22
+          "fill-color": "#2f8f46",
+          "fill-opacity": 0.2
         }
       });
 
@@ -283,10 +497,13 @@ export function MapView({
         id: "metsaregister-stands-line",
         type: "line",
         source: "metsaregister-stands",
+        layout: {
+          visibility: "none"
+        },
         paint: {
-          "line-color": "#854d0e",
+          "line-color": "#14532d",
           "line-width": 1.6,
-          "line-opacity": 0.78
+          "line-opacity": 0.72
         }
       });
 
@@ -294,6 +511,9 @@ export function MapView({
         id: "forest-notices-line",
         type: "line",
         source: "forest-notices",
+        layout: {
+          visibility: "none"
+        },
         paint: {
           "line-color": "#2563eb",
           "line-width": 3,
@@ -307,8 +527,8 @@ export function MapView({
         type: "fill",
         source: "selected-area",
         paint: {
-          "fill-color": "#22c55e",
-          "fill-opacity": 0.26
+          "fill-color": "#16a34a",
+          "fill-opacity": 0.28
         }
       });
 
@@ -317,25 +537,57 @@ export function MapView({
         type: "line",
         source: "selected-area",
         paint: {
-          "line-color": "#061a0d",
+          "line-color": "#052e16",
           "line-width": 3,
           "line-opacity": 0.9
         }
       });
 
-      map.fitBounds(
-        [
-          [21.55, 57.2],
-          [28.45, 59.78]
-        ],
-        {
-          padding: { top: 120, right: 80, bottom: 60, left: 80 },
-          duration: 0
-        }
-      );
+      map.fitBounds(estoniaBounds, {
+        padding: { top: 120, right: 80, bottom: 60, left: 80 },
+        duration: 0
+      });
+      scheduleVisibleForestLoad();
     });
 
-    map.on("click", (event) => {
+    const tooltip = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 10
+    });
+
+    map.on("mousemove", "etak-forest-preview-fill", (event) => {
+      const feature = event.features?.[0];
+      if (!feature) {
+        return;
+      }
+
+      map.getCanvas().style.cursor = "pointer";
+      tooltip
+        .setLngLat(event.lngLat)
+        .setHTML(
+          `<strong>Metsaala</strong><br/>${
+            feature.properties?.etakId
+              ? `ETAK ${escapeHtml(feature.properties.etakId)}<br/>`
+              : ""
+          }${
+            feature.properties?.areaHa
+              ? `${escapeHtml(feature.properties.areaHa)} ha`
+              : "ETAK puittaimestik"
+          }`
+        )
+        .addTo(map);
+    });
+
+    map.on("mouseleave", "etak-forest-preview-fill", () => {
+      map.getCanvas().style.cursor = "grab";
+      tooltip.remove();
+    });
+
+    map.on("moveend", scheduleVisibleForestLoad);
+    map.on("zoomend", scheduleVisibleForestLoad);
+
+    map.on("click", "etak-forest-preview-fill", (event) => {
       onSelectForestAt({
         lng: event.lngLat.lng,
         lat: event.lngLat.lat
@@ -343,10 +595,74 @@ export function MapView({
     });
 
     return () => {
+      if (visibleForestTimer) {
+        window.clearTimeout(visibleForestTimer);
+      }
+      visibleForestAbort?.abort();
+      tooltip.remove();
       map.remove();
       mapRef.current = null;
     };
   }, [onSelectForestAt]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+
+    function updateLayerVisibility() {
+      if (!mapRef.current) {
+        return;
+      }
+
+      setLayerVisibility(mapRef.current, ["cadastral-boundaries"], visibleLayers.cadastre);
+      setLayerVisibility(
+        mapRef.current,
+        ["protected-fill", "protected-line"],
+        visibleLayers.protection
+      );
+      setLayerVisibility(
+        mapRef.current,
+        [
+          "metsaregister-stands-fill",
+          "metsaregister-stands-line",
+          "forest-notices-line"
+        ],
+        visibleLayers.registry
+      );
+    }
+
+    if (map.loaded()) {
+      updateLayerVisibility();
+    } else {
+      map.once("load", updateLayerVisibility);
+    }
+  }, [visibleLayers]);
+
+  useEffect(() => {
+    function onEvidenceSource(event: Event) {
+      const sourceId = (event as CustomEvent<{ sourceId?: string }>).detail
+        ?.sourceId;
+
+      if (sourceId === "maaamet-cadastre") {
+        setVisibleLayers((current) => ({ ...current, cadastre: true }));
+      }
+      if (sourceId === "eelis") {
+        setVisibleLayers((current) => ({ ...current, protection: true }));
+      }
+      if (sourceId === "metsaregister") {
+        setVisibleLayers((current) => ({ ...current, registry: true }));
+      }
+    }
+
+    window.addEventListener("metsapeegel:evidence-source", onEvidenceSource);
+    return () =>
+      window.removeEventListener(
+        "metsapeegel:evidence-source",
+        onEvidenceSource
+      );
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -368,6 +684,13 @@ export function MapView({
             }
           : emptyCollection
       );
+      if (currentMap.getLayer("selected-fill")) {
+        currentMap.setPaintProperty(
+          "selected-fill",
+          "fill-color",
+          selectedForestColor(analysis)
+        );
+      }
       setGeojsonSource(
         currentMap,
         "metsaregister-stands",
@@ -397,7 +720,7 @@ export function MapView({
               top: 130,
               right: isDesktop ? 520 : 70,
               bottom: isDesktop ? 80 : 360,
-              left: 70
+              left: isDesktop ? 470 : 70
             },
             maxZoom: 10.8,
             duration: 850
@@ -413,11 +736,124 @@ export function MapView({
     }
   }, [selectedAreaId, analysis]);
 
+  const layerControls: Array<{
+    key: keyof LayerVisibility;
+    label: string;
+    legendClassName: string;
+  }> = [
+    {
+      key: "registry",
+      label: "Metsaregister",
+      legendClassName: "border-[var(--forest-800)] bg-[var(--forest-500)]"
+    },
+    {
+      key: "protection",
+      label: "Kaitse",
+      legendClassName: "border-blue-800 bg-blue-400"
+    },
+    {
+      key: "cadastre",
+      label: "Kataster",
+      legendClassName: "border-slate-700 bg-white"
+    }
+  ];
+
   return (
     <>
       <div className="absolute inset-0" ref={containerRef} />
-      <div className="pointer-events-none fixed bottom-3 left-16 z-10 hidden rounded-md bg-white/75 px-2 py-1 text-[11px] text-slate-600 shadow-sm backdrop-blur sm:block">
-        Metsad: ETAK WMS/WFS · eraldised: Metsaregister · kaitseinfo: EELIS
+      <div className="fixed bottom-3 left-3 z-10 flex max-w-[calc(100vw-1.5rem)] flex-col gap-2 sm:bottom-5 sm:left-[450px]">
+        <div className="glass-panel hidden rounded-lg p-2 shadow-panel sm:block">
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-800">
+            <Layers aria-hidden className="size-3.5 text-[var(--forest-700)]" />
+            Kihid
+          </div>
+          <div className="grid gap-1.5">
+            {layerControls.map((layer) => (
+              <button
+                className={`flex items-center justify-between gap-3 rounded-md px-2 py-1.5 text-xs font-medium ring-1 transition ${
+                  visibleLayers[layer.key]
+                    ? "bg-[var(--sage-100)] text-[var(--forest-900)] ring-[var(--forest-200)]"
+                    : "bg-white/80 text-slate-600 ring-slate-200 hover:bg-white"
+                }`}
+                key={layer.key}
+                onClick={() =>
+                  setVisibleLayers((current) => ({
+                    ...current,
+                    [layer.key]: !current[layer.key]
+                  }))
+                }
+                type="button"
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`size-2.5 rounded-sm border ${layer.legendClassName}`}
+                  />
+                  {layer.label}
+                </span>
+                <span>{visibleLayers[layer.key] ? "sees" : "väljas"}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 border-t border-slate-200 pt-2 text-[11px] leading-4 text-slate-600">
+            <div className="mb-1 font-semibold text-slate-800">Legend</div>
+            <div className="flex items-center gap-1.5">
+              <span className="size-2 rounded-sm bg-[#23783a]" /> metsaala
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="size-2 rounded-sm border border-[#061a0d] bg-emerald-300" /> valitud ala
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="size-2 rounded-sm bg-blue-400" /> kaitsekattuvus
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="size-2 rounded-sm border border-slate-700 bg-white" /> katastripiir
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="size-2 rounded-sm border border-dashed border-slate-500 bg-slate-100" /> muutusetõend puudub
+            </div>
+            <div className="mt-1 max-w-40 text-[10px] text-slate-500">
+              Klikitavad on rohelised WFS metsaalad. Teised kihid on vaikimisi tagasihoidlikud.
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden gap-1.5 sm:flex">
+          <button
+            className="grid size-9 place-items-center rounded-md bg-white/85 text-slate-700 ring-1 ring-slate-200 backdrop-blur hover:bg-white"
+            onClick={() => fitEstonia()}
+            title="Reset view"
+            type="button"
+          >
+            <RotateCcw aria-hidden className="size-4" />
+          </button>
+          <button
+            className="grid size-9 place-items-center rounded-md bg-white/85 text-slate-700 ring-1 ring-slate-200 backdrop-blur hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={!analysis}
+            onClick={zoomToSelected}
+            title="Zoom to selected"
+            type="button"
+          >
+            <LocateFixed aria-hidden className="size-4" />
+          </button>
+        </div>
+      </div>
+      <div className="pointer-events-none fixed bottom-3 left-[450px] z-10 hidden rounded-md bg-white/75 px-2 py-1 text-[11px] text-slate-600 shadow-sm backdrop-blur sm:block">
+        Roheline piir on klikitav ETAK WFS metsaala; valitud ala jääb sama rohelisega esile.
+      </div>
+      <div className="pointer-events-none fixed bottom-10 left-[450px] z-10 hidden rounded-md bg-white/80 px-2 py-2 text-[11px] text-slate-600 shadow-sm backdrop-blur">
+        <div className="mb-1 font-semibold text-slate-800">Valitud ala tõlgendus</div>
+        <div className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-emerald-500" /> madal
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-amber-500" /> vajab selgitust
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-red-500" /> tundlik kooslus
+        </div>
+        <div className="mt-1 max-w-36 text-[10px] leading-4 text-slate-500">
+          Hele metsakiht on taust, mitte risk.
+        </div>
       </div>
     </>
   );

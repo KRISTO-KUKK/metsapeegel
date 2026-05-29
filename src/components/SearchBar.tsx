@@ -109,7 +109,7 @@ export function SearchBar({
       </form>
 
       {isOpen && results.length > 0 ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] overflow-hidden rounded-lg border border-white/80 bg-white shadow-panel">
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-lg border border-white/80 bg-white shadow-panel">
           {results.map((result) => (
             <button
               className="flex w-full items-start gap-3 px-3 py-3 text-left hover:bg-[var(--sage-50)]"

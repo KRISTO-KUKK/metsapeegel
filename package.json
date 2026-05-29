@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "inspect:area": "node scripts/inspect-area.mjs"
   },
   "dependencies": {
     "@turf/turf": "^7.2.0",

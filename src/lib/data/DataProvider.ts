@@ -1,5 +1,6 @@
 import type {
   Area,
+  EcosystemBenefit,
   ForestChange,
   ForestNotice,
   ForestStand,
@@ -32,6 +33,11 @@ export interface DataProvider {
     areaId?: string,
     area?: Area
   ): Promise<ProtectedArea[]>;
+  getEcosystemBenefits(
+    areaGeometry: Geometry,
+    areaId?: string,
+    area?: Area
+  ): Promise<EcosystemBenefit[]>;
   getSatelliteSignal(areaId: string): Promise<SatelliteSignal | null>;
 }
 

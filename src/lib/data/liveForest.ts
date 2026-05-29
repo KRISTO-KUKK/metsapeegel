@@ -15,6 +15,12 @@ import type { Area } from "@/lib/types/forestry";
 
 type WfsFeature = Feature<Geometry | null, Record<string, unknown>>;
 type WfsCollection = FeatureCollection<Geometry | null, Record<string, unknown>>;
+type VisibleForestProperties = {
+  etakId?: number;
+  etakFeatureId?: string;
+  etakType?: string;
+  areaHa?: number;
+};
 
 type CadastreContext = {
   cadastralId?: string;
@@ -51,6 +57,40 @@ function bboxAround(lng: number, lat: number, delta = 0.0007): string {
     lat + delta,
     "EPSG:4326"
   ].join(",");
+}
+
+function bboxString(
+  west: number,
+  south: number,
+  east: number,
+  north: number
+): string {
+  return [west, south, east, north, "EPSG:4326"].join(",");
+}
+
+function splitBbox(
+  west: number,
+  south: number,
+  east: number,
+  north: number
+) {
+  const width = east - west;
+  const height = north - south;
+  const columns = width > 4 ? 4 : width > 2 ? 3 : width > 1 ? 2 : 1;
+  const rows = height > 1.5 ? 3 : height > 0.8 ? 2 : 1;
+  const cells: Array<[number, number, number, number]> = [];
+
+  for (let column = 0; column < columns; column += 1) {
+    for (let row = 0; row < rows; row += 1) {
+      const cellWest = west + (width * column) / columns;
+      const cellEast = west + (width * (column + 1)) / columns;
+      const cellSouth = south + (height * row) / rows;
+      const cellNorth = south + (height * (row + 1)) / rows;
+      cells.push([cellWest, cellSouth, cellEast, cellNorth]);
+    }
+  }
+
+  return cells;
 }
 
 async function fetchWfs(
@@ -160,6 +200,36 @@ function areaFromEtakFeature(
   };
 }
 
+function visibleFeatureFromEtak(
+  feature: WfsFeature
+): Feature<Geometry, VisibleForestProperties> | null {
+  if (!isForestFeature(feature) || !feature.geometry) {
+    return null;
+  }
+
+  const etakId = numberValue(feature.properties.etak_id);
+  const fid = numberValue(feature.properties.fid);
+  const etakFeatureId = stringValue(feature.id);
+
+  return {
+    type: "Feature",
+    id: etakId ?? fid ?? etakFeatureId,
+    properties: {
+      etakId,
+      etakFeatureId,
+      etakType: stringValue(feature.properties.tyyp_tekst),
+      areaHa: roundHa(
+        turfArea({
+          type: "Feature",
+          properties: {},
+          geometry: feature.geometry
+        })
+      )
+    },
+    geometry: feature.geometry
+  };
+}
+
 function cadastreFromFeature(feature: WfsFeature): CadastreContext {
   return {
     cadastralId: stringValue(feature.properties.tunnus),
@@ -208,4 +278,50 @@ export async function findLiveForestAt(
 
   const cadastre = await findCadastreAt(lng, lat);
   return areaFromEtakFeature(forestFeature, cadastre);
+}
+
+export async function findLiveForestsInBbox(
+  west: number,
+  south: number,
+  east: number,
+  north: number,
+  count = 450
+): Promise<FeatureCollection<Geometry, VisibleForestProperties>> {
+  const cells = splitBbox(west, south, east, north);
+  const cellCount = Math.max(60, Math.ceil(count / cells.length));
+  const collections = await Promise.allSettled(
+    cells.map((cell) =>
+      fetchWfs(
+        etakWfsUrl,
+        etakLayer,
+        bboxString(...cell),
+        cellCount
+      )
+    )
+  );
+  const features = collections
+    .flatMap((result) =>
+      result.status === "fulfilled" ? result.value.features : []
+    )
+    .map(visibleFeatureFromEtak)
+    .filter(
+      (feature): feature is Feature<Geometry, VisibleForestProperties> =>
+        feature !== null
+    );
+  const uniqueFeatures = new Map<string, Feature<Geometry, VisibleForestProperties>>();
+
+  for (const feature of features) {
+    const key =
+      feature.properties.etakId?.toString() ??
+      feature.properties.etakFeatureId ??
+      JSON.stringify(feature.geometry).slice(0, 120);
+    if (!uniqueFeatures.has(key)) {
+      uniqueFeatures.set(key, feature);
+    }
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: Array.from(uniqueFeatures.values()).slice(0, count)
+  };
 }

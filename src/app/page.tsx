@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { AnalysisPanel } from "@/components/AnalysisPanel";
+import { AssistantPanel } from "@/components/AssistantPanel";
 import { MapView } from "@/components/MapView";
 import { SearchBar } from "@/components/SearchBar";
 import type { AnalysisResult } from "@/lib/types/forestry";
@@ -79,19 +80,21 @@ export default function Home() {
       />
       <div className="map-vignette" />
 
-      <header className="pointer-events-none fixed left-0 right-0 top-0 z-20 px-4 pt-4 sm:px-6">
+      <header className="pointer-events-none fixed left-0 right-0 top-0 z-30 px-4 pt-4 sm:px-6">
         <div className="pointer-events-auto mx-auto flex max-w-6xl flex-col gap-3 rounded-lg glass-panel p-3 sm:flex-row sm:items-center sm:gap-5">
           <div className="min-w-0 sm:w-72">
             <div className="text-xl font-semibold text-[var(--forest-950)]">
-              Metsapeegel
+              Metsatark
             </div>
             <div className="truncate text-sm text-[var(--muted)]">
-              Vaata, mis valitud metsaalal andmete põhjal toimus.
+              AI tõlgendab ametlikke metsaandmeid.
             </div>
           </div>
           <SearchBar onSelectArea={selectArea} />
         </div>
       </header>
+
+      <AssistantPanel analysis={analysis} isLoading={isLoading} />
 
       <AnalysisPanel
         analysis={analysis}

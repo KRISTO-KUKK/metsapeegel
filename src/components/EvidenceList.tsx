@@ -1,5 +1,6 @@
 import {
   FileText,
+  Leaf,
   RadioTower,
   Satellite,
   ShieldCheck,
@@ -10,6 +11,7 @@ import type { EvidenceItem, EvidenceKind } from "@/lib/types/forestry";
 
 const iconByKind: Record<EvidenceKind, typeof Trees> = {
   cadastre: Trees,
+  ecosystem: Leaf,
   registry: FileText,
   remote_sensing: RadioTower,
   protection: ShieldCheck,

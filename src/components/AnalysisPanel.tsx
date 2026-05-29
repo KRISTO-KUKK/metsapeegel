@@ -1,27 +1,401 @@
 "use client";
 
-import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
-import { ConfidenceScore } from "@/components/ConfidenceScore";
-import { EvidenceList } from "@/components/EvidenceList";
-import { SourceBadges } from "@/components/SourceBadges";
-import { StatusBadge } from "@/components/StatusBadge";
-import { Timeline } from "@/components/Timeline";
-import type { AnalysisResult } from "@/lib/types/forestry";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  Database,
+  FileText,
+  Info,
+  Layers,
+  Loader2,
+  MapPinned,
+  ShieldAlert,
+  Sparkles
+} from "lucide-react";
+import clsx from "clsx";
+import type {
+  AnalysisResult,
+  NormalizedEvidenceItem,
+  NormalizedEvidenceTone,
+  NormalizedInterpretationBlock,
+  NormalizedProtectionGroup,
+  NormalizedSourceStatus,
+  SourceStatus
+} from "@/lib/types/forestry";
+
+const sourceStatusLabel: Record<SourceStatus, string> = {
+  loaded: "laetud",
+  missing: "andmed puuduvad",
+  error: "viga",
+  not_public: "mitteavalik",
+  not_connected: "ühendamata"
+};
+
+const sourceStatusClass: Record<SourceStatus, string> = {
+  loaded: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  missing: "bg-amber-50 text-amber-900 ring-amber-200",
+  error: "bg-red-50 text-red-800 ring-red-200",
+  not_public: "bg-slate-100 text-slate-700 ring-slate-200",
+  not_connected: "bg-slate-100 text-slate-700 ring-slate-200"
+};
+
+const toneClass: Record<NormalizedEvidenceTone, string> = {
+  positive: "border-emerald-200 bg-emerald-50/85 text-emerald-950",
+  attention: "border-amber-200 bg-amber-50/90 text-amber-950",
+  limit: "border-rose-200 bg-rose-50/90 text-rose-950",
+  neutral: "border-slate-200 bg-white/88 text-slate-900"
+};
 
 function Section({
   title,
+  subtitle,
   children
 }: {
   title: string;
+  subtitle?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-t border-slate-200 pt-4">
-      <h3 className="mb-2 text-xs font-semibold uppercase text-slate-500">
-        {title}
-      </h3>
+    <section className="space-y-3 border-t border-slate-200 pt-4">
+      <div>
+        <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+        {subtitle ? (
+          <p className="mt-0.5 text-xs leading-5 text-slate-500">{subtitle}</p>
+        ) : null}
+      </div>
       {children}
     </section>
+  );
+}
+
+function StatusPill({ status }: { status: SourceStatus }) {
+  return (
+    <span
+      className={clsx(
+        "rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1",
+        sourceStatusClass[status]
+      )}
+    >
+      {sourceStatusLabel[status]}
+    </span>
+  );
+}
+
+function FactRow({
+  label,
+  value,
+  tooltip
+}: {
+  label: string;
+  value: React.ReactNode;
+  tooltip?: string;
+}) {
+  return (
+    <div className="grid grid-cols-[105px_1fr] gap-3 text-sm leading-5">
+      <div className="flex items-center gap-1 text-slate-500">
+        <span>{label}</span>
+        {tooltip ? (
+          <span title={tooltip}>
+            <Info aria-hidden className="size-3.5" />
+          </span>
+        ) : null}
+      </div>
+      <div className="font-medium text-slate-900">{value}</div>
+    </div>
+  );
+}
+
+function BulletList({
+  items,
+  markerClassName = "bg-[var(--forest-600)]"
+}: {
+  items: string[];
+  markerClassName?: string;
+}) {
+  return (
+    <ul className="space-y-2 text-sm leading-6 text-slate-700">
+      {items.map((item) => (
+        <li className="flex gap-2" key={item}>
+          <span className={clsx("mt-2 size-1.5 shrink-0 rounded-full", markerClassName)} />
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function EvidenceCard({
+  id,
+  title,
+  icon: Icon,
+  tone,
+  highlighted,
+  children
+}: {
+  id: string;
+  title: string;
+  icon: typeof FileText;
+  tone: NormalizedEvidenceTone;
+  highlighted: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <article
+      className={clsx(
+        "scroll-mt-28 rounded-lg border px-3 py-3 transition-shadow",
+        toneClass[tone],
+        highlighted && "shadow-[0_0_0_3px_rgba(47,107,60,0.22)]"
+      )}
+      id={id}
+    >
+      <div className="mb-2 flex items-center gap-2">
+        <Icon aria-hidden className="size-4 shrink-0" />
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      {children}
+    </article>
+  );
+}
+
+function MetricPills({ block }: { block: NormalizedInterpretationBlock }) {
+  if (!block.metrics?.length) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {block.metrics.slice(0, 5).map((metric) => (
+        <span
+          className="rounded-full bg-white/75 px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200"
+          key={`${block.id}-${metric.label}`}
+          title={metric.label}
+        >
+          <span className="text-slate-500">{metric.label}: </span>
+          {metric.value}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function InterpretationBlockCard({
+  block,
+  id,
+  highlighted,
+  icon
+}: {
+  block: NormalizedInterpretationBlock;
+  id: string;
+  highlighted: boolean;
+  icon: typeof FileText;
+}) {
+  return (
+    <EvidenceCard
+      highlighted={highlighted}
+      icon={icon}
+      id={id}
+      title={block.title}
+      tone={block.tone}
+    >
+      <p className="text-sm leading-6 text-current">{block.summary}</p>
+      <MetricPills block={block} />
+    </EvidenceCard>
+  );
+}
+
+function findEvidence(
+  analysis: AnalysisResult,
+  id: string | null
+): NormalizedEvidenceItem | undefined {
+  if (!id) return undefined;
+  return analysis.normalizedEvidence.evidenceItems.find((item) => item.id === id);
+}
+
+function UsedDataRow({
+  source,
+  highlighted
+}: {
+  source: NormalizedSourceStatus;
+  highlighted: boolean;
+}) {
+  return (
+    <article
+      className={clsx(
+        "rounded-lg border bg-white/88 px-3 py-3 transition",
+        highlighted
+          ? "border-[var(--forest-700)] shadow-[0_0_0_3px_rgba(47,107,60,0.16)]"
+          : "border-slate-200"
+      )}
+      data-source-id={source.id}
+      id={`source-${source.id}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold leading-5 text-slate-950">
+            {source.name}
+          </h4>
+          <p className="mt-0.5 text-xs leading-5 text-slate-600">
+            {source.summary}
+          </p>
+          {source.url ? (
+            <a
+              className="mt-1 inline-flex text-xs font-semibold text-[var(--forest-700)] hover:text-[var(--forest-900)]"
+              href={source.url}
+              rel="noreferrer"
+              target="_blank"
+            >
+              Ava allikas
+            </a>
+          ) : null}
+        </div>
+        <StatusPill status={source.status} />
+      </div>
+    </article>
+  );
+}
+
+function ProtectionGroups({
+  groups
+}: {
+  groups: NormalizedProtectionGroup[];
+}) {
+  if (groups.length === 0) {
+    return (
+      <p className="rounded-lg border border-slate-200 bg-white/88 px-3 py-3 text-sm leading-5 text-slate-600">
+        Ühendatud EELIS kihid ei tagastanud selle ala kohta kaitse-, Natura-,
+        VEP- ega elupaigakattuvust.
+      </p>
+    );
+  }
+
+  const visible = groups.slice(0, 4);
+  const hidden = groups.slice(4);
+
+  function groupText(group: NormalizedProtectionGroup) {
+    const overlap =
+      group.overlapHa !== undefined
+        ? `, kattuvus ligikaudu ${group.overlapHa} ha`
+        : "";
+    const codes = group.codes?.length ? `: ${group.codes.join(", ")}` : "";
+    const count = group.count > 1 && !group.codes?.length ? ` (${group.count} objekti)` : "";
+    return `${group.label}${codes}${count}${overlap}`;
+  }
+
+  return (
+    <div className="space-y-2" id="card-protection">
+      {visible.map((group) => (
+        <div
+          className="rounded-lg border border-sky-100 bg-sky-50/75 px-3 py-2 text-sm leading-5 text-sky-950"
+          key={group.id}
+        >
+          {groupText(group)}
+        </div>
+      ))}
+      <p className="rounded-lg bg-white/80 px-3 py-2 text-xs leading-5 text-slate-600 ring-1 ring-slate-200">
+        Kattuvus ei ole lõplik õiguslik otsus, aga see on oluline kontekst.
+      </p>
+      {hidden.length > 0 ? (
+        <details className="group rounded-lg border border-slate-200 bg-white">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-slate-800">
+            Näita kõiki kattuvusi ({groups.length})
+            <ChevronDown
+              aria-hidden
+              className="size-4 transition group-open:rotate-180"
+            />
+          </summary>
+          <div className="space-y-2 border-t border-slate-200 p-2">
+            {hidden.map((group) => (
+              <div
+                className="rounded-md bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-700"
+                key={group.id}
+              >
+                {groupText(group)}
+              </div>
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function EcosystemDetails({ analysis }: { analysis: AnalysisResult }) {
+  const ecosystem = analysis.normalizedEvidence.ecosystemContext;
+  const rows = [
+    ecosystem.woodRawMaterialCount > 0
+      ? `Puidutooraine kattuvusi: ${ecosystem.woodRawMaterialCount}.`
+      : undefined,
+    ecosystem.carbonStorageCount > 0
+      ? `Süsiniku kattuvusi: ${ecosystem.carbonStorageCount}.`
+      : undefined,
+    ecosystem.woodEurPerHaMin !== undefined &&
+    ecosystem.woodEurPerHaMax !== undefined
+      ? `Puidutooraine hinnangu vahemik: ${ecosystem.woodEurPerHaMin}-${ecosystem.woodEurPerHaMax} eurot/ha.`
+      : undefined,
+    ecosystem.woodTotalEur !== undefined
+      ? `Leitud puidutooraine hinnangute summa: ${ecosystem.woodTotalEur} eurot.`
+      : undefined,
+    ecosystem.carbonTonPerHaMin !== undefined &&
+    ecosystem.carbonTonPerHaMax !== undefined
+      ? `Süsiniku hinnangu vahemik: ${ecosystem.carbonTonPerHaMin}-${ecosystem.carbonTonPerHaMax} t C/ha.`
+      : undefined
+  ].filter((row): row is string => Boolean(row));
+
+  return (
+    <div className="space-y-2" id="card-ecosystem">
+      <p className="rounded-lg border border-slate-200 bg-white/88 px-3 py-3 text-sm leading-5 text-slate-700">
+        {ecosystem.summary}
+      </p>
+      {rows.length > 0 ? <BulletList items={rows} /> : null}
+    </div>
+  );
+}
+
+function TechnicalDetails({ analysis }: { analysis: AnalysisResult }) {
+  const pkg = analysis.evidencePackage;
+
+  return (
+    <details className="group rounded-lg border border-slate-200 bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-slate-800">
+        Tehnilised detailid
+        <ChevronDown
+          aria-hidden
+          className="size-4 transition group-open:rotate-180"
+        />
+      </summary>
+      <div className="space-y-3 border-t border-slate-200 p-3">
+        <div className="grid gap-2 text-xs leading-5 text-slate-700">
+          <FactRow label="ETAK ID" value={analysis.area.etakId ?? "puudub"} />
+          <FactRow label="Geomeetria" value={pkg.selectedArea.geometrySource} />
+          <FactRow label="Valikutüüp" value={pkg.selectedArea.selectionType} />
+          <FactRow label="ETAK tüüp" value={analysis.area.etakType ?? "puudub"} />
+        </div>
+        <details className="group/raw rounded-md border border-slate-200 bg-slate-50">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-xs font-semibold text-slate-700">
+            Toorandmete lühivaade
+            <ChevronDown
+              aria-hidden
+              className="size-4 transition group-open/raw:rotate-180"
+            />
+          </summary>
+          <pre className="max-h-72 overflow-auto border-t border-slate-200 p-3 text-xs leading-5 text-slate-700">
+            {JSON.stringify(
+              {
+                area: analysis.area,
+                sourceStatus: analysis.normalizedEvidence.sourceStatus,
+                registrySummary: analysis.normalizedEvidence.registrySummary,
+                protectionSummary: analysis.normalizedEvidence.protectionSummary,
+                ecosystemContext: analysis.normalizedEvidence.ecosystemContext,
+                rawFacts: analysis.rawFacts
+              },
+              null,
+              2
+            )}
+          </pre>
+        </details>
+      </div>
+    </details>
   );
 }
 
@@ -34,12 +408,76 @@ export function AnalysisPanel({
   isLoading: boolean;
   error: string | null;
 }) {
+  const [highlightedTargetId, setHighlightedTargetId] = useState<string | null>(
+    null
+  );
+  const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    function onEvidenceLink(event: Event) {
+      const detail = (event as CustomEvent<{
+        evidenceId?: string;
+        sourceId?: string;
+        targetId?: string;
+      }>).detail;
+
+      if (!detail) return;
+
+      const evidence = analysis
+        ? findEvidence(analysis, detail.evidenceId ?? null)
+        : undefined;
+      const targetId = detail.targetId ?? evidence?.targetId ?? null;
+      const sourceId = detail.sourceId ?? evidence?.sourceId ?? null;
+
+      if (targetId) {
+        setHighlightedTargetId(targetId);
+        document
+          .getElementById(targetId)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        window.setTimeout(() => setHighlightedTargetId(null), 2600);
+      }
+
+      if (sourceId) {
+        setHighlightedSourceId(sourceId);
+        window.setTimeout(() => setHighlightedSourceId(null), 2600);
+      }
+    }
+
+    function onEvidenceSource(event: Event) {
+      const sourceId = (event as CustomEvent<{ sourceId?: string }>).detail
+        ?.sourceId;
+      if (!sourceId) return;
+
+      setHighlightedSourceId(sourceId);
+      document
+        .getElementById(`source-${sourceId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      window.setTimeout(() => setHighlightedSourceId(null), 2600);
+    }
+
+    window.addEventListener("metsapeegel:evidence-link", onEvidenceLink);
+    window.addEventListener("metsapeegel:evidence-source", onEvidenceSource);
+    return () => {
+      window.removeEventListener("metsapeegel:evidence-link", onEvidenceLink);
+      window.removeEventListener("metsapeegel:evidence-source", onEvidenceSource);
+    };
+  }, [analysis]);
+
+  const loadedSourceCount = useMemo(() => {
+    if (!analysis) return 0;
+    return analysis.normalizedEvidence.sourceStatus.filter(
+      (source) => source.status === "loaded"
+    ).length;
+  }, [analysis]);
+
   return (
-    <aside className="fixed bottom-3 left-3 right-3 z-10 max-h-[42dvh] overflow-y-auto rounded-lg glass-panel p-3 shadow-panel sm:bottom-5 sm:left-auto sm:right-5 sm:top-28 sm:max-h-none sm:w-[440px] sm:p-5">
+    <aside className="fixed bottom-3 left-3 right-3 z-10 max-h-[42dvh] overflow-y-auto rounded-lg glass-panel p-3 shadow-panel sm:bottom-5 sm:left-auto sm:right-5 sm:top-24 sm:max-h-none sm:w-[510px] sm:p-5">
       {isLoading ? (
         <div className="flex min-h-32 items-center justify-center gap-3 text-sm text-slate-600 sm:min-h-56">
           <Loader2 aria-hidden className="size-5 animate-spin text-[var(--forest-700)]" />
-          Koostan tõlgendust...
+          Laen valitud ala tõendipakki...
         </div>
       ) : error ? (
         <div className="flex min-h-32 items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 sm:min-h-56">
@@ -48,130 +486,222 @@ export function AnalysisPanel({
         </div>
       ) : analysis ? (
         <div className="space-y-5">
-          <div>
+          <header>
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <StatusBadge status={analysis.status} />
-              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
-                {analysis.area.areaHa} ha
+              <span className="inline-flex items-center gap-2 rounded-full bg-[var(--sage-100)] px-2.5 py-1 text-xs font-semibold text-[var(--forest-800)]">
+                <Sparkles aria-hidden className="size-3.5" />
+                AI-tõlgendus ametlike andmete peal
               </span>
-              {analysis.area.forestHa ? (
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200">
-                  metsamaad {analysis.area.forestHa} ha
-                </span>
-              ) : null}
+              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                {loadedSourceCount}/{analysis.normalizedEvidence.sourceStatus.length} allikat laetud
+              </span>
             </div>
             <h2 className="text-xl font-semibold leading-7 text-slate-950">
-              {analysis.headline}
+              {analysis.normalizedEvidence.area.title}
             </h2>
-            {analysis.area.type === "parcel" || analysis.area.type === "forest" ? (
-              <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600">
-                {analysis.area.etakId ? (
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-800">
-                    ETAK mets {analysis.area.etakId}
-                  </span>
-                ) : null}
-                {analysis.area.cadastralId ? (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                    {analysis.area.cadastralId}
-                  </span>
-                ) : null}
-                {analysis.area.ownershipForm ? (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                    {analysis.area.ownershipForm}
-                  </span>
-                ) : null}
-                {analysis.area.landUse ? (
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                    {analysis.area.landUse.toLocaleLowerCase("et")}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-            <p className="mt-2 text-sm leading-6 text-slate-700">
-              {analysis.summary}
+            <p className="mt-1 text-sm leading-5 text-slate-600">
+              {analysis.normalizedEvidence.area.subtitle}
             </p>
+          </header>
+
+          <section
+            className="rounded-lg border border-[var(--forest-200)] bg-[var(--sage-50)] px-3 py-3 text-[var(--forest-950)]"
+            id="card-basic"
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <Sparkles aria-hidden className="size-4 shrink-0 text-[var(--forest-700)]" />
+              <h3 className="text-sm font-semibold">Tõlgenduse tuum</h3>
+            </div>
+            <p className="text-sm leading-6">
+              {analysis.normalizedEvidence.interpretation.primaryTakeaway}
+            </p>
+          </section>
+
+          <div className="grid gap-3">
+            <InterpretationBlockCard
+              block={analysis.normalizedEvidence.interpretation.activity}
+              highlighted={highlightedTargetId === "card-attention"}
+              icon={ShieldAlert}
+              id="card-attention"
+            />
+
+            <InterpretationBlockCard
+              block={analysis.normalizedEvidence.interpretation.standStructure}
+              highlighted={highlightedTargetId === "card-registry"}
+              icon={MapPinned}
+              id="card-registry"
+            />
+
+            <InterpretationBlockCard
+              block={analysis.normalizedEvidence.interpretation.nature}
+              highlighted={
+                highlightedTargetId === "card-protection" ||
+                highlightedTargetId === "card-ecosystem"
+              }
+              icon={Layers}
+              id="card-context"
+            />
+
+            <InterpretationBlockCard
+              block={analysis.normalizedEvidence.interpretation.dataGaps}
+              highlighted={highlightedTargetId === "card-cannot-claim"}
+              icon={AlertTriangle}
+              id="card-cannot-claim"
+            />
           </div>
 
-          <Section title="Usaldusskoor">
-            <ConfidenceScore score={analysis.confidenceScore} />
-          </Section>
+          <details className="group rounded-lg border border-slate-200 bg-white/82">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-semibold text-slate-900">
+              <span>
+                Andmepaki seis: {analysis.normalizedEvidence.dataCompleteness.score}/100
+              </span>
+              <ChevronDown
+                aria-hidden
+                className="size-4 transition group-open:rotate-180"
+              />
+            </summary>
+            <div className="border-t border-slate-200 px-3 py-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-950">
+                    {analysis.normalizedEvidence.dataCompleteness.score}/100 ·{" "}
+                    {analysis.normalizedEvidence.dataCompleteness.label}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    {analysis.normalizedEvidence.dataCompleteness.meaning}
+                  </p>
+                </div>
+                <Database
+                  aria-hidden
+                  className="size-5 shrink-0 text-[var(--forest-700)]"
+                />
+              </div>
+              <BulletList
+                items={analysis.normalizedEvidence.dataCompleteness.reasons}
+                markerClassName="bg-slate-500"
+              />
+            </div>
+          </details>
 
-          <Section title="Mis juhtus?">
-            <ul className="space-y-2 text-sm leading-6 text-slate-700">
-              {analysis.whatHappened.map((item) => (
-                <li className="flex gap-2" key={item}>
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-[var(--forest-600)]" />
-                  <span>{item}</span>
-                </li>
+          <details className="group rounded-lg border border-slate-200 bg-white/82">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-semibold text-slate-900">
+              <span>Kasutatud andmed ja ühendamata allikad</span>
+              <ChevronDown
+                aria-hidden
+                className="size-4 transition group-open:rotate-180"
+              />
+            </summary>
+            <div className="space-y-2 border-t border-slate-200 p-3">
+              <p className="text-xs leading-5 text-slate-600">
+                Üks rida allika kohta. Ühendamata allikat ei kasutata
+                faktitõendina, aga link on alles, kui sellest võiks järgmises
+                iteratsioonis kasu olla.
+              </p>
+              {analysis.normalizedEvidence.sourceStatus.map((source) => (
+                <UsedDataRow
+                  highlighted={highlightedSourceId === source.id}
+                  key={source.id}
+                  source={source}
+                />
               ))}
-            </ul>
+            </div>
+          </details>
+
+          <Section title="Kaitsekattuvused">
+            <ProtectionGroups
+              groups={analysis.normalizedEvidence.protectionSummary}
+            />
           </Section>
 
-          <Section title="Mille põhjal?">
-            <EvidenceList evidence={analysis.evidence} />
+          <details className="group rounded-lg border border-slate-200 bg-white/82">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-semibold text-slate-900">
+              Metsaregistri detailid
+              <ChevronDown
+                aria-hidden
+                className="size-4 transition group-open:rotate-180"
+              />
+            </summary>
+            <div className="space-y-2 border-t border-slate-200 px-3 py-3" id="card-registry-detail">
+              <FactRow
+                label="Eraldised"
+                value={`${analysis.normalizedEvidence.registrySummary.standsCount} tk`}
+              />
+              <FactRow
+                label="Teatised"
+                tooltip="Metsateatis on ametlik teade kavandatud raie või metsakahjustuse kohta; see ei tõenda üksinda, et töö on toimunud."
+                value={`${analysis.normalizedEvidence.registrySummary.activeNoticesCount} aktiivset, ${analysis.normalizedEvidence.registrySummary.archivedNoticesCount} arhiveeritud`}
+              />
+              <FactRow
+                label="Puuliigid"
+                value={
+                  analysis.normalizedEvidence.registrySummary.dominantSpecies.length
+                    ? analysis.normalizedEvidence.registrySummary.dominantSpecies.join(", ")
+                    : "andmetes ei leitud"
+                }
+              />
+              <FactRow
+                label="Arenguklass"
+                value={
+                  analysis.normalizedEvidence.registrySummary.developmentClasses.length
+                    ? analysis.normalizedEvidence.registrySummary.developmentClasses.join(", ")
+                    : "andmetes ei leitud"
+                }
+              />
+              <FactRow
+                label="Inventuur"
+                value={analysis.normalizedEvidence.registrySummary.inventorySummary}
+              />
+              {analysis.normalizedEvidence.registrySummary.veryOldInventory ? (
+                <p className="rounded-md bg-amber-50 px-2 py-2 text-xs font-medium leading-5 text-amber-900 ring-1 ring-amber-200">
+                  Andmed võivad olla väga vanad. See mõjutab seda, kui julgelt
+                  saab praegust metsaseisu kirjeldada.
+                </p>
+              ) : null}
+            </div>
+          </details>
+
+          <Section title="Looduse hüved">
+            <EcosystemDetails analysis={analysis} />
           </Section>
 
-          <Section title="Mis on puudu?">
-            <ul className="space-y-2 text-sm leading-6 text-slate-700">
-              {analysis.missingInfo.map((item) => (
-                <li className="flex gap-2" key={item}>
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-[var(--amber)]" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-            {analysis.warnings.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                {analysis.warnings.map((warning) => (
+          {analysis.normalizedEvidence.timeline.length > 0 ? (
+            <Section title="Ajajoon">
+              <div className="space-y-2">
+                {analysis.normalizedEvidence.timeline.map((item) => (
                   <div
-                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-5 text-amber-900"
-                    key={warning}
+                    className="rounded-lg border border-slate-200 bg-white/88 px-3 py-2 text-sm leading-5 text-slate-700"
+                    key={item.id}
                   >
-                    {warning}
+                    <div className="font-semibold text-slate-950">
+                      {item.year ? `${item.year}: ` : ""}
+                      {item.label}
+                    </div>
+                    <div>{item.detail}</div>
                   </div>
                 ))}
               </div>
-            ) : null}
-          </Section>
+            </Section>
+          ) : null}
 
-          <Section title="Ajajoon">
-            <Timeline events={analysis.timeline} />
-          </Section>
-
-          <Section title="Andmeallikad">
-            <SourceBadges sources={analysis.sources} />
-          </Section>
-
-          <Section title="Tehniline detail">
-            <details className="group rounded-lg border border-slate-200 bg-white">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-semibold text-slate-800">
-                JSON / raw facts
-                <ChevronDown
-                  aria-hidden
-                  className="size-4 transition group-open:rotate-180"
-                />
-              </summary>
-              <pre className="max-h-72 overflow-auto border-t border-slate-200 p-3 text-xs leading-5 text-slate-700">
-                {JSON.stringify(analysis.rawFacts, null, 2)}
-              </pre>
-            </details>
-          </Section>
+          <TechnicalDetails analysis={analysis} />
         </div>
       ) : (
         <div>
-          <div className="mb-2 inline-flex rounded-full bg-[var(--sage-100)] px-2.5 py-1 text-xs font-semibold text-[var(--forest-800)]">
-            Metsandusandmete tõlgenduskiht
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--sage-100)] px-2.5 py-1 text-xs font-semibold text-[var(--forest-800)]">
+            <Layers aria-hidden className="size-3.5" />
+            Metsatarga tõlgenduskiht
           </div>
           <h2 className="text-lg font-semibold leading-6 text-slate-950">
-            Klõpsa rohelisel metsaalal.
+            Klõpsa metsaalal.
           </h2>
           <p className="mt-2 text-sm leading-5 text-slate-600">
-            Valik päritakse Maa- ja Ruumiameti ETAK WFS-ist ning tehakse
-            ainult siis, kui klõps jääb tüübi “Mets” polügooni sisse.
+            Siia tekib inimkeelne vastus: mida ametlike andmete põhjal saab
+            väita, millised tõendid seda toetavad ja mida ei tohi üle väita.
           </p>
-          <div className="mt-3 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs leading-5 text-slate-600">
-            Maakonnad on taust. Katastrist kuvatakse tunnus ja omandivorm,
-            mitte eraomaniku nimi.
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs leading-5 text-slate-600">
+            <FileText aria-hidden className="mt-0.5 size-4 shrink-0" />
+            Tehnilised allikad jäävad avatavatesse detailidesse; demo algab
+            lihtsast vastusest.
           </div>
         </div>
       )}

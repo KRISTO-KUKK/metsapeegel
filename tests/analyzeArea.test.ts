@@ -110,6 +110,9 @@ function providerFor({
     async getProtectedAreas() {
       return protectedAreas;
     },
+    async getEcosystemBenefits() {
+      return [];
+    },
     async getSatelliteSignal() {
       return satelliteSignal;
     }
@@ -129,6 +132,10 @@ describe("analyzeArea", () => {
     expect(result.missingInfo).toContain(
       "Metsauuenduse kohta ei ole selles prototüübis värsket infot."
     );
+    expect(result.publicAudit.publicUserSees.join(" ")).toContain(
+      "Metsaregistris on 1 metsateatis"
+    );
+    expect(result.aiNarrative.mode).toBe("template");
   });
 
   it("keeps unexplained change cautious when no notice exists", async () => {
@@ -143,6 +150,9 @@ describe("analyzeArea", () => {
     expect(result.warnings.join(" ")).toContain(
       "See ei tähenda automaatselt rikkumist"
     );
+    expect(result.publicAudit.possibleMisreadings.join(" ")).toContain(
+      "andmesignaal"
+    );
   });
 
   it("recognizes planned activity when notice exists without remote change", async () => {
@@ -154,6 +164,9 @@ describe("analyzeArea", () => {
     expect(result.status).toBe("planned_activity");
     expect(result.confidenceScore).toBeGreaterThanOrEqual(65);
     expect(result.confidenceScore).toBeLessThanOrEqual(75);
+    expect(result.publicAudit.disclosureRecommendation.level).toBe(
+      "explain_publicly"
+    );
   });
 
   it("shows protected context without exposing hidden detail", async () => {
@@ -175,6 +188,7 @@ describe("analyzeArea", () => {
 
     expect(result.status).toBe("protected_context");
     expect(result.warnings.join(" ")).toContain("Detailset infot ei kuvata");
+    expect(result.publicAudit.riskLevel).toBe("high");
     expect(JSON.stringify(result.rawFacts)).not.toContain(
       "Tundliku loodusväärtuse üldistus"
     );
@@ -188,5 +202,6 @@ describe("analyzeArea", () => {
 
     expect(result.status).toBe("no_major_change");
     expect(result.confidenceScore).toBeGreaterThanOrEqual(75);
+    expect(result.publicAudit.disclosureRecommendation.level).toBe("public_ok");
   });
 });

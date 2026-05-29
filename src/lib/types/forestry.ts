@@ -91,6 +91,7 @@ export type AnalysisStatus =
 
 export type EvidenceKind =
   | "cadastre"
+  | "ecosystem"
   | "registry"
   | "remote_sensing"
   | "protection"
@@ -123,18 +124,411 @@ export type DataSourceRef = {
   detail: string;
 };
 
+export type SourceStatus =
+  | "loaded"
+  | "missing"
+  | "error"
+  | "not_public"
+  | "not_connected";
+
+export type EvidenceSource = {
+  id: string;
+  name: string;
+  provider: string;
+  url?: string;
+  retrievedAt?: string;
+  dataDate?: string;
+  status: SourceStatus;
+  warning?: string;
+};
+
+export type StructuredEvidenceItem = {
+  id: string;
+  sourceId: string;
+  label: string;
+  value: string | number | boolean | null;
+  unit?: string;
+  confidence?: "high" | "medium" | "low";
+  explanation?: string;
+};
+
+export type SpatialOverlap = {
+  id: string;
+  sourceId: string;
+  layerName: string;
+  overlapAreaHa?: number;
+  overlapPercentOfSelectedArea?: number;
+  properties: Record<string, unknown>;
+};
+
+export type EcosystemBenefitCategory =
+  | "wood_raw_material"
+  | "carbon_storage"
+  | "wood_context";
+
+export type EcosystemBenefit = SpatialOverlap & {
+  category: EcosystemBenefitCategory;
+  title: string;
+  valueLabel?: string;
+  dataYear?: number;
+};
+
+export type DerivedFinding = {
+  id: string;
+  title: string;
+  severity: "info" | "attention" | "warning";
+  claim: string;
+  evidenceItemIds: string[];
+  caveat: string;
+};
+
+export type MissingEvidence = {
+  id: string;
+  label: string;
+  whyItMatters: string;
+};
+
+export type DataPriority =
+  | "critical"
+  | "high"
+  | "medium"
+  | "context"
+  | "background";
+
+export type PrioritizedInsight = {
+  id: string;
+  priority: DataPriority;
+  title: string;
+  summary: string;
+  sourceIds: string[];
+  visibleByDefault: boolean;
+  reason: string;
+  caveat?: string;
+};
+
+export type PriorityBlockTone =
+  | "base"
+  | "attention"
+  | "registry"
+  | "nature"
+  | "gaps";
+
+export type PriorityBlock = {
+  id: string;
+  title: string;
+  subtitle: string;
+  tone: PriorityBlockTone;
+  rank: number;
+  items: string[];
+  sourceIds: string[];
+  caveat?: string;
+};
+
+export type DataCatalogEntry = {
+  id: string;
+  name: string;
+  provider: string;
+  scope:
+    | "selected_area"
+    | "spatial_context"
+    | "national_context"
+    | "api_catalog";
+  priority: DataPriority;
+  status: SourceStatus;
+  url?: string;
+  description: string;
+  aiUse: string;
+  userVisibility: "always" | "when_relevant" | "advanced";
+  limitation?: string;
+};
+
+export type ForestAreaEvidencePackage = {
+  selectedArea: {
+    selectionType:
+      | "etak_forest"
+      | "cadastre"
+      | "drawn_area"
+      | "forest_registry_stand";
+    geometryId?: string;
+    geometrySource: string;
+    areaHa?: number;
+    county?: string;
+    municipality?: string;
+    cadastralIds: string[];
+  };
+  etak: {
+    forestObjectId?: string;
+    objectType?: string;
+    areaHa?: number;
+    sourceStatus: SourceStatus;
+  };
+  cadastre: {
+    cadastralIds: string[];
+    ownershipForm?: string;
+    parcels: StructuredEvidenceItem[];
+    sourceStatus: SourceStatus;
+  };
+  forestRegistry: {
+    stands: SpatialOverlap[];
+    notices: SpatialOverlap[];
+    archivedNotices: SpatialOverlap[];
+    forestProtectionExpertises: SpatialOverlap[];
+    regenerationExpertises: SpatialOverlap[];
+    sourceStatus: SourceStatus;
+  };
+  eelis: {
+    protectedAreaOverlaps: SpatialOverlap[];
+    naturaOverlaps: SpatialOverlap[];
+    restrictionOverlaps: SpatialOverlap[];
+    hiddenSensitiveDataNote?: string;
+    sourceStatus: SourceStatus;
+  };
+  forestChanges: {
+    lidarChangeOverlaps: SpatialOverlap[];
+    hasChangeEvidence: boolean;
+    sourceStatus: SourceStatus;
+  };
+  ecosystemBenefits: {
+    woodRawMaterialOverlaps: EcosystemBenefit[];
+    carbonStorageOverlaps: EcosystemBenefit[];
+    otherOverlaps: EcosystemBenefit[];
+    sourceStatus: SourceStatus;
+  };
+  mapContext: {
+    countyBoundarySourceStatus: SourceStatus;
+    basemapSourceStatus: SourceStatus;
+  };
+  priorityBlocks: PriorityBlock[];
+  prioritizedInsights: PrioritizedInsight[];
+  dataCatalog: DataCatalogEntry[];
+  derivedFindings: DerivedFinding[];
+  missingEvidence: MissingEvidence[];
+  sources: EvidenceSource[];
+};
+
+export type PublicRiskLevel = "low" | "medium" | "high";
+
+export type DisclosureLevel =
+  | "public_ok"
+  | "explain_publicly"
+  | "generalize"
+  | "authenticated";
+
+export type PublicAudit = {
+  targetUser: string;
+  riskScore: number;
+  riskLevel: PublicRiskLevel;
+  publicSummary: string;
+  publicUserSees: string[];
+  possibleMisreadings: string[];
+  riskFactors: string[];
+  disclosureRecommendation: {
+    level: DisclosureLevel;
+    label: string;
+    rationale: string;
+    suggestedUiText: string[];
+  };
+  aiBrief: string[];
+};
+
+export type AiNarrative = {
+  mode: "template" | "openai" | "ollama";
+  status: "generated" | "ready" | "fallback";
+  provider: string;
+  model?: string;
+  summary: string;
+  note?: string;
+};
+
+export type AnswerVerdict =
+  | "supported"
+  | "partial"
+  | "not_supported"
+  | "unknown";
+
+export type AreaAnswerEvidence = {
+  id: string;
+  label: string;
+  detail: string;
+  source: string;
+  sourceId?: string;
+  tone: EvidenceTone;
+  year?: number;
+};
+
+export type NormalizedEvidenceTone =
+  | "positive"
+  | "attention"
+  | "limit"
+  | "neutral";
+
+export type NormalizedEvidenceItem = {
+  id: string;
+  sourceId: string;
+  label: string;
+  summary: string;
+  status: SourceStatus;
+  tone: NormalizedEvidenceTone;
+  targetId?: string;
+};
+
+export type NormalizedKeyFinding = {
+  id: string;
+  title: string;
+  summary: string;
+  tone: NormalizedEvidenceTone;
+  evidenceIds: string[];
+};
+
+export type NormalizedProtectionGroup = {
+  id: string;
+  type: "protected_area" | "natura" | "vep" | "habitat" | "restriction";
+  label: string;
+  count: number;
+  overlapHa?: number;
+  codes?: string[];
+  evidenceIds: string[];
+};
+
+export type NormalizedRegistrySummary = {
+  standsCount: number;
+  activeNoticesCount: number;
+  archivedNoticesCount: number;
+  noticeTypes: string[];
+  dominantSpecies: string[];
+  developmentClasses: string[];
+  inventoryYears: number[];
+  oldestInventoryYear?: number;
+  newestInventoryYear?: number;
+  veryOldInventory: boolean;
+  inventorySummary: string;
+};
+
+export type NormalizedEcosystemContext = {
+  sourceStatus: SourceStatus;
+  summary: string;
+  woodRawMaterialCount: number;
+  carbonStorageCount: number;
+  otherCount: number;
+  woodEurPerHaMin?: number;
+  woodEurPerHaMax?: number;
+  woodTotalEur?: number;
+  carbonTonPerHaMin?: number;
+  carbonTonPerHaMax?: number;
+};
+
+export type NormalizedSourceStatus = {
+  id: string;
+  name: string;
+  provider?: string;
+  url?: string;
+  status: SourceStatus;
+  summary: string;
+  targetId?: string;
+};
+
+export type NormalizedDataCompleteness = {
+  score: number;
+  label: string;
+  reasons: string[];
+  meaning: string;
+};
+
+export type NormalizedInterpretationBlock = {
+  id: string;
+  title: string;
+  summary: string;
+  tone: NormalizedEvidenceTone;
+  evidenceIds: string[];
+  metrics?: Array<{
+    label: string;
+    value: string;
+  }>;
+};
+
+export type NormalizedInterpretation = {
+  primaryTakeaway: string;
+  activity: NormalizedInterpretationBlock;
+  standStructure: NormalizedInterpretationBlock;
+  nature: NormalizedInterpretationBlock;
+  dataGaps: NormalizedInterpretationBlock;
+};
+
+export type NormalizedTimelineItem = {
+  id: string;
+  year?: number;
+  label: string;
+  detail: string;
+  tone: EvidenceTone;
+  evidenceIds: string[];
+};
+
+export type NormalizedSelectedAreaEvidence = {
+  area: {
+    title: string;
+    subtitle: string;
+    areaHa: number;
+    cadastralId?: string;
+    ownershipForm?: string;
+    landUse?: string;
+    etakId?: number;
+    type: Area["type"];
+  };
+  quickAnswer: string[];
+  keyFindings: NormalizedKeyFinding[];
+  criticalGaps: NormalizedKeyFinding[];
+  cannotClaim: NormalizedKeyFinding[];
+  evidenceItems: NormalizedEvidenceItem[];
+  sourceStatus: NormalizedSourceStatus[];
+  protectionSummary: NormalizedProtectionGroup[];
+  registrySummary: NormalizedRegistrySummary;
+  ecosystemContext: NormalizedEcosystemContext;
+  dataCompleteness: NormalizedDataCompleteness;
+  interpretation: NormalizedInterpretation;
+  timeline: NormalizedTimelineItem[];
+  aiContext: {
+    answerRules: string[];
+    evidenceRequired: string[];
+  };
+};
+
+export type AreaQuestionAnswer = {
+  mode: "template" | "openai" | "ollama";
+  status: "generated" | "ready" | "fallback";
+  provider: string;
+  model?: string;
+  question: string;
+  verdict: AnswerVerdict;
+  verdictLabel: string;
+  confidence: number;
+  shortAnswer: string;
+  explanation: string;
+  canSay: string[];
+  cannotSay: string[];
+  evidence: AreaAnswerEvidence[];
+  evidenceIds: string[];
+  mapHints: string[];
+  followUps: string[];
+  sources: DataSourceRef[];
+  note?: string;
+};
+
 export type AnalysisResult = {
   area: Area;
   status: AnalysisStatus;
   confidenceScore: number;
   headline: string;
   summary: string;
+  publicAudit: PublicAudit;
+  aiNarrative: AiNarrative;
   whatHappened: string[];
   evidence: EvidenceItem[];
   missingInfo: string[];
   timeline: TimelineEvent[];
   warnings: string[];
   sources: DataSourceRef[];
+  evidencePackage: ForestAreaEvidencePackage;
+  normalizedEvidence: NormalizedSelectedAreaEvidence;
   rawFacts: Record<string, unknown>;
 };
 
