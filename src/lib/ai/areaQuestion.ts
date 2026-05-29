@@ -1275,20 +1275,37 @@ function questionFocusForAnalysis(
       "wood"
     ])
   ) {
+    const hasWoodValueRange =
+      ecosystem.woodEurPerHaMin !== undefined &&
+      ecosystem.woodEurPerHaMax !== undefined;
+
     return {
       kind: "wood_raw_material",
       title: "ELME puidutooraine",
-      shortAnswer: `Puidutooraine kattuvusi on ${ecosystem.woodRawMaterialCount}.`,
+      shortAnswer:
+        ecosystem.woodRawMaterialCount > 0
+          ? `See tähendab, et ELME puidutooraine kiht lõikub valitud alaga ${ecosystem.woodRawMaterialCount} kirjes; see on ressursi- ja väärtustaust, mitte raietõend.`
+          : "ELME puidutooraine kattuvusi selles andmepakis ei leitud.",
       explanation:
         ecosystem.woodRawMaterialCount > 0
-          ? "See arv tuleb ELME looduse hüvede puidutooraine kattuvustest valitud geomeetriaga."
+          ? [
+              "Praktiliselt aitab see aru saada, kas valitud metsaalal on ELME mudeli järgi puidutooraine ressursi-, potentsiaali- või väärtuse taustainfot.",
+              `${ecosystem.woodRawMaterialCount} ei tähenda ${ecosystem.woodRawMaterialCount} raiet, ${ecosystem.woodRawMaterialCount} omanikku ega ${ecosystem.woodRawMaterialCount} metsaeraldist; see on ruumiliste ELME hinnangukirjete arv, mis alaga kattuvad.`,
+              hasWoodValueRange
+                ? `Andmepakis olevate kirjete väärtusvahemik on ${ecosystem.woodEurPerHaMin}-${ecosystem.woodEurPerHaMax} eurot/ha, mida tuleb lugeda taustahinnanguna.`
+                : "Selles vastuses ei arvutata majanduslikku otsust ega lõplikku puidu väärtust."
+            ].join("\n")
           : "ELME puidutooraine kattuvusi selles andmepakis ei leitud.",
       canSay: uniqueRows([
-        `Puidutooraine kattuvusi: ${ecosystem.woodRawMaterialCount}.`,
+        ecosystem.woodRawMaterialCount > 0
+          ? `ELME puidutooraine kattuvusi on ${ecosystem.woodRawMaterialCount}.`
+          : "ELME puidutooraine kattuvust ei leitud.",
+        ecosystem.woodRawMaterialCount > 0
+          ? "Kattuvuste olemasolu annab kasutajale lisakonteksti metsa ressursi ja ökosüsteemse väärtuse kohta."
+          : undefined,
         `Süsiniku kattuvusi: ${ecosystem.carbonStorageCount}.`,
         `Muid ELME kattuvusi: ${ecosystem.otherCount}.`,
-        ecosystem.woodEurPerHaMin !== undefined &&
-        ecosystem.woodEurPerHaMax !== undefined
+        hasWoodValueRange
           ? `Puidutooraine hinnangu vahemik: ${ecosystem.woodEurPerHaMin}-${ecosystem.woodEurPerHaMax} eurot/ha.`
           : undefined,
         ecosystem.woodTotalEur !== undefined
@@ -1296,7 +1313,8 @@ function questionFocusForAnalysis(
           : undefined
       ]),
       cannotSay: [
-        "ELME väärtused on kontekst, mitte raietõend ega tegevuse lubatavuse otsus.",
+        "See ei ütle, et ala tuleks raiuda või raiumata jätta.",
+        "See ei tõenda, et raie on toimunud või lubatud.",
         "Kui metoodika ei luba väärtusi summeerida, ei tohi neid esitada lõpliku majandusliku hinnanguna."
       ],
       evidenceIds: ["elme-context"],
@@ -2054,6 +2072,8 @@ const conversationalAnswerInstructions = [
   "Kui questionFocus on olemas, on see otsene fookus ja selle shortAnswer, canSay ning evidenceIds on sinu faktialus.",
   "Kui kasutaja küsib mitu/palju/kui palju/arvu, vasta queryableFacts.counts vastava täpse arvuga.",
   "Kui kasutaja küsib ELME, looduse hüvede, puidutooraine, süsiniku või biomassiga seotud asja, kasuta ainult queryableFacts.ecosystemContext ja sourceDetails.elme; ära vasta EELIS kaitsekattuvuste arvuga.",
+  "Kui kasutaja küsib, mida puidutooraine kattuvuste arv tähendab, ära piirdu arvu kordamisega. Selgita: kattuvus on ELME ruumilise hinnangukihi kirje valitud alal; see aitab mõista ressursi- ja väärtustausta; see ei ole raie, omanik, eraldis, luba ega soovitus.",
+  "ELME vastustes ütle kasutaja jaoks praktiline tähendus enne metoodikapiirangut: milleks infot saab kasutada, mida see ei otsusta ja milline järgmine kontroll oleks mõistlik.",
   "Kui kasutaja küsib kaitse/Natura/VEP/elupaiga kohta, kasuta EELIS fakte; ära vasta ELME arvuga.",
   "Kõik arvud peavad täpselt kattuma sisendis olevate arvudega. Ära ümarda ega asenda teise allika arvuga.",
   "Iga valitud ala kohta käiv sisuline fakt peab tuginema normalizedEvidence.evidenceItems id-le ja vastuses peab olema evidenceIds massiiv.",

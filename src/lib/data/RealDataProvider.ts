@@ -737,6 +737,8 @@ function protectedAreaFromFeature(
       selectedAreaHa,
       approximateOverlap
     ),
+    registryCode: code,
+    sourceLayer: layerConfig.layer,
     geometry: feature.geometry
   };
 }

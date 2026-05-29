@@ -81,6 +81,8 @@ export type ProtectedArea = {
     | "sensitive_hidden";
   publicDetailLevel: "full" | "generalized" | "hidden";
   overlapHa: number;
+  registryCode?: string;
+  sourceLayer?: string;
   geometry?: Geometry;
 };
 

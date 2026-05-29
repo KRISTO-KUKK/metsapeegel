@@ -34,7 +34,7 @@ const area: Area = {
 };
 
 const freshStand: ForestStand = {
-  id: "stand-1",
+  id: "metsaregister-stand-1429525",
   areaId: area.id,
   mainSpecies: "kuusk",
   developmentClass: "noorendik",
@@ -209,7 +209,21 @@ describe("analyzeArea", () => {
   it("builds source links that point at the selected area", async () => {
     const result = await analyzeArea(
       area.id,
-      providerFor({ stands: [freshStand] })
+      providerFor({
+        stands: [freshStand],
+        protectedAreas: [
+          {
+            id: "eelis:kr_kaitseala-KLO2000340",
+            name: "Test kaitseala",
+            type: "protected_area",
+            publicDetailLevel: "full",
+            overlapHa: 1,
+            registryCode: "KLO2000340",
+            sourceLayer: "eelis:kr_kaitseala",
+            geometry
+          }
+        ]
+      })
     );
     const source = (id: string) =>
       result.normalizedEvidence.sourceStatus.find((item) => item.id === id);
@@ -218,15 +232,17 @@ describe("analyzeArea", () => {
       "https://ky.kataster.ee/ky/29202%3A005%3A0601"
     );
     expect(source("metsaregister")?.url).toBe(
-      "https://register.metsad.ee/portaal/api/rest/eraldis/puu?katastriNr=29202%3A005%3A0601"
+      "https://register.metsad.ee/eraldis/1429525"
     );
     expect(source("maaamet-etak-forest")?.url).toContain(
-      "CQL_FILTER=etak_id%3D12345"
+      "https://xgis.maaamet.ee/xgis2/page/app/maainfo"
     );
-    expect(source("eelis")?.url).toContain("TYPENAMES=eelis%3Akr_kaitseala");
-    expect(source("eelis")?.url).toContain("BBOX=24.8795");
-    expect(source("elme")?.url).toContain(
-      "TYPENAMES=elme%3Apuidu_sortimendid_kogus_hind_2022"
+    expect(source("maaamet-etak-forest")?.url).toContain("ETAK+metsaala+12345");
+    expect(source("eelis")?.url).toBe(
+      "https://register.keskkonnaportaal.ee/register?kkr_kood=KLO2000340&mount=view"
+    );
+    expect(source("elme")?.url).toBe(
+      "https://keskkonnaportaal.ee/et/teemad/loodushuved"
     );
   });
 });

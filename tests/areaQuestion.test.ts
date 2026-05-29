@@ -757,6 +757,8 @@ describe("generateAreaQuestionAnswer", () => {
     expect(answer.verdict).toBe("supported");
     expect(answer.shortAnswer).toContain("14");
     expect(answer.shortAnswer.toLocaleLowerCase("et")).toContain("puidutooraine");
+    expect(answer.explanation.toLocaleLowerCase("et")).toContain("ei tähenda 14 raiet");
+    expect(answer.explanation.toLocaleLowerCase("et")).toContain("ressursi");
     expect(answer.evidenceIds).toContain("elme-context");
     expect(answer.evidenceIds).not.toContain("protection-summary");
   });
