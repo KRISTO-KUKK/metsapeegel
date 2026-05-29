@@ -65,6 +65,10 @@ function templateNarrative(input: NarrativeInput): AiNarrative {
   };
 }
 
+export function generateTemplateNarrative(input: NarrativeInput): AiNarrative {
+  return templateNarrative(input);
+}
+
 function compactInput(input: NarrativeInput) {
   return {
     status: input.status,
@@ -205,9 +209,14 @@ function requestedProvider(): "template" | "openai" | "ollama" {
 }
 
 export async function generateAiNarrative(
-  input: NarrativeInput
+  input: NarrativeInput,
+  options: { allowNetwork?: boolean } = {}
 ): Promise<AiNarrative> {
   const fallback = templateNarrative(input);
+  if (options.allowNetwork === false) {
+    return fallback;
+  }
+
   const provider = requestedProvider();
 
   if (provider === "template") {

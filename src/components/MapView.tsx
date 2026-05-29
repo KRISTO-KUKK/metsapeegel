@@ -6,12 +6,19 @@ import { Layers, LocateFixed, RotateCcw } from "lucide-react";
 import maplibregl, { GeoJSONSource } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import countiesGeojson from "@/data/official/counties.geojson";
-import type { AnalysisResult } from "@/lib/types/forestry";
+import type {
+  AnalysisResult,
+  AreaMapAction,
+  AreaQueryResponse
+} from "@/lib/types/forestry";
 
 type Props = {
   analysis: AnalysisResult | null;
   selectedAreaId: string | null;
   onSelectForestAt: (coordinates: { lng: number; lat: number }) => void;
+  onSelectForestFeature: (
+    feature: Feature<Geometry, Record<string, unknown>>
+  ) => void;
 };
 
 type GeoCollection = FeatureCollection<Geometry, Record<string, unknown>>;
@@ -19,6 +26,14 @@ type LayerVisibility = {
   cadastre: boolean;
   protection: boolean;
   registry: boolean;
+};
+
+type QueryOverlayState = {
+  label: string;
+  status: "idle" | "loading" | "ready" | "error";
+  matchedCount: number;
+  inspectedCount: number;
+  message?: string;
 };
 
 const emptyCollection: GeoCollection = {
@@ -149,16 +164,49 @@ function selectedForestColor(_analysis: AnalysisResult | null): string {
   return "#16a34a";
 }
 
+function forestFeatureKey(feature: Feature<Geometry, Record<string, unknown>>) {
+  return String(
+    feature.properties.etakId ??
+      feature.properties.etakFeatureId ??
+      feature.id ??
+      JSON.stringify(feature.geometry).slice(0, 160)
+  );
+}
+
+function featureFromMapEvent(
+  event: maplibregl.MapLayerMouseEvent
+): Feature<Geometry, Record<string, unknown>> | null {
+  const feature = event.features?.[0];
+  if (!feature?.geometry) {
+    return null;
+  }
+
+  return {
+    type: "Feature",
+    id: feature.id,
+    properties: { ...(feature.properties ?? {}) },
+    geometry: feature.geometry as Geometry
+  };
+}
+
 export function MapView({
   analysis,
   selectedAreaId,
-  onSelectForestAt
+  onSelectForestAt,
+  onSelectForestFeature
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [visibleLayers, setVisibleLayers] = useState<LayerVisibility>(
     defaultLayerVisibility
   );
+  const [queryOverlay, setQueryOverlay] = useState<QueryOverlayState | null>(
+    null
+  );
+  const visibleForestCacheRef = useRef<
+    Map<string, Feature<Geometry, Record<string, unknown>>>
+  >(new Map());
+  const visibleForestOrderRef = useRef<string[]>([]);
 
   const fitEstonia = useCallback((duration = 650) => {
     mapRef.current?.fitBounds(estoniaBounds, {
@@ -231,6 +279,31 @@ export function MapView({
     let visibleForestAbort: AbortController | null = null;
     let visibleForestTimer: number | null = null;
 
+    function mergeVisibleForestData(data: GeoCollection, maxFeatures: number) {
+      const cache = visibleForestCacheRef.current;
+      const order = visibleForestOrderRef.current;
+
+      for (const feature of data.features) {
+        const key = forestFeatureKey(feature);
+        if (!cache.has(key)) {
+          order.push(key);
+        }
+        cache.set(key, feature);
+      }
+
+      while (order.length > maxFeatures) {
+        const oldest = order.shift();
+        if (oldest) {
+          cache.delete(oldest);
+        }
+      }
+
+      return {
+        type: "FeatureCollection" as const,
+        features: Array.from(cache.values())
+      };
+    }
+
     function scheduleVisibleForestLoad() {
       if (visibleForestTimer) {
         window.clearTimeout(visibleForestTimer);
@@ -255,7 +328,8 @@ export function MapView({
           .map((coordinate) => coordinate.toFixed(6))
           .join(",");
 
-        const count = zoom < 7.2 ? 1800 : zoom < 8.8 ? 1200 : 700;
+        const count = zoom < 7.2 ? 3200 : zoom < 8.8 ? 2400 : 1100;
+        const maxCachedFeatures = zoom < 7.2 ? 4200 : zoom < 8.8 ? 5200 : 6200;
 
         try {
           const response = await fetch(
@@ -267,7 +341,11 @@ export function MapView({
           }
 
           const data = (await response.json()) as GeoCollection;
-          setGeojsonSource(map, "etak-forest-preview", data);
+          setGeojsonSource(
+            map,
+            "etak-forest-preview",
+            mergeVisibleForestData(data, maxCachedFeatures)
+          );
         } catch (cause) {
           if (cause instanceof DOMException && cause.name === "AbortError") {
             return;
@@ -332,6 +410,10 @@ export function MapView({
         type: "geojson",
         data: emptyCollection
       });
+      map.addSource("query-results", {
+        type: "geojson",
+        data: emptyCollection
+      });
 
       map.addLayer({
         id: "maaamet-base-map",
@@ -351,7 +433,7 @@ export function MapView({
         type: "raster",
         source: "maaamet-forest-cover",
         paint: {
-          "raster-opacity": 0.25,
+          "raster-opacity": 0.36,
           "raster-saturation": -0.28,
           "raster-contrast": 0.02
         }
@@ -414,7 +496,9 @@ export function MapView({
             ["linear"],
             ["zoom"],
             7,
-            0.34,
+            0.18,
+            8.4,
+            0.3,
             10,
             0.46
           ]
@@ -523,6 +607,35 @@ export function MapView({
       });
 
       map.addLayer({
+        id: "query-results-fill",
+        type: "fill",
+        source: "query-results",
+        paint: {
+          "fill-color": "#facc15",
+          "fill-opacity": 0.42
+        }
+      });
+
+      map.addLayer({
+        id: "query-results-line",
+        type: "line",
+        source: "query-results",
+        paint: {
+          "line-color": "#854d0e",
+          "line-width": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            7,
+            1.2,
+            11,
+            2.8
+          ],
+          "line-opacity": 0.9
+        }
+      });
+
+      map.addLayer({
         id: "selected-fill",
         type: "fill",
         source: "selected-area",
@@ -588,10 +701,48 @@ export function MapView({
     map.on("zoomend", scheduleVisibleForestLoad);
 
     map.on("click", "etak-forest-preview-fill", (event) => {
-      onSelectForestAt({
-        lng: event.lngLat.lng,
-        lat: event.lngLat.lat
-      });
+      const clickedFeature = featureFromMapEvent(event);
+      if (clickedFeature) {
+        const cachedFeature =
+          visibleForestCacheRef.current.get(forestFeatureKey(clickedFeature)) ??
+          clickedFeature;
+        onSelectForestFeature(cachedFeature);
+        return;
+      }
+
+      onSelectForestAt({ lng: event.lngLat.lng, lat: event.lngLat.lat });
+    });
+
+    map.on("mousemove", "query-results-fill", (event) => {
+      const feature = event.features?.[0];
+      if (!feature) {
+        return;
+      }
+
+      map.getCanvas().style.cursor = "pointer";
+      tooltip
+        .setLngLat(event.lngLat)
+        .setHTML(
+          `<strong>${escapeHtml(feature.properties?.label ?? "Filtri tulemus")}</strong><br/>${escapeHtml(
+            feature.properties?.matchReason ?? "Vastab kaardifiltrile."
+          )}`
+        )
+        .addTo(map);
+    });
+
+    map.on("mouseleave", "query-results-fill", () => {
+      map.getCanvas().style.cursor = "grab";
+      tooltip.remove();
+    });
+
+    map.on("click", "query-results-fill", (event) => {
+      const clickedFeature = featureFromMapEvent(event);
+      if (clickedFeature) {
+        onSelectForestFeature(clickedFeature);
+        return;
+      }
+
+      onSelectForestAt({ lng: event.lngLat.lng, lat: event.lngLat.lat });
     });
 
     return () => {
@@ -603,7 +754,7 @@ export function MapView({
       map.remove();
       mapRef.current = null;
     };
-  }, [onSelectForestAt]);
+  }, [onSelectForestAt, onSelectForestFeature]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -662,6 +813,83 @@ export function MapView({
         "metsapeegel:evidence-source",
         onEvidenceSource
       );
+  }, []);
+
+  useEffect(() => {
+    async function onAreaQuery(event: Event) {
+      const action = (event as CustomEvent<AreaMapAction>).detail;
+      const map = mapRef.current;
+      if (!map || !action || action.type !== "highlight_area_query") {
+        return;
+      }
+
+      const bounds = map.getBounds();
+      const requestBbox = [
+        bounds.getWest(),
+        bounds.getSouth(),
+        bounds.getEast(),
+        bounds.getNorth()
+      ]
+        .map((coordinate) => coordinate.toFixed(6))
+        .join(",");
+      const params = new URLSearchParams({
+        bbox: requestBbox,
+        filter: action.filterId,
+        limit: "30"
+      });
+
+      if (action.year) {
+        params.set("year", String(action.year));
+      }
+      if (action.beforeYear) {
+        params.set("beforeYear", String(action.beforeYear));
+      }
+      if (action.ownershipForm) {
+        params.set("ownershipForm", action.ownershipForm);
+      }
+
+      setQueryOverlay({
+        label: action.label,
+        status: "loading",
+        matchedCount: 0,
+        inspectedCount: 0,
+        message: "Kontrollin nähtavaid metsaalasid ametlike allikatega..."
+      });
+
+      try {
+        const response = await fetch(`/api/area-query?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error("Kaardifiltri päring ebaõnnestus.");
+        }
+
+        const result = (await response.json()) as AreaQueryResponse;
+        setGeojsonSource(map, "query-results", result);
+        setQueryOverlay({
+          label: result.query.label,
+          status: "ready",
+          matchedCount: result.query.matchedCount,
+          inspectedCount: result.query.inspectedCount,
+          message:
+            result.query.matchedCount > 0
+              ? "Tulemused jäid kaardile; klõpsa esile tõstetud alal, et avada detailid."
+              : "Selles kaardivaates vastavaid alasid ei leitud."
+        });
+      } catch (cause) {
+        setQueryOverlay({
+          label: action.label,
+          status: "error",
+          matchedCount: 0,
+          inspectedCount: 0,
+          message:
+            cause instanceof Error
+              ? cause.message
+              : "Kaardifiltri päring ebaõnnestus."
+        });
+      }
+    }
+
+    window.addEventListener("metsapeegel:area-query", onAreaQuery);
+    return () => window.removeEventListener("metsapeegel:area-query", onAreaQuery);
   }, []);
 
   useEffect(() => {
@@ -762,6 +990,35 @@ export function MapView({
     <>
       <div className="absolute inset-0" ref={containerRef} />
       <div className="fixed bottom-3 left-3 z-10 flex max-w-[calc(100vw-1.5rem)] flex-col gap-2 sm:bottom-5 sm:left-[450px]">
+        {queryOverlay ? (
+          <div className="glass-panel max-w-sm rounded-lg p-3 shadow-panel">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-slate-900">
+                  {queryOverlay.label}
+                </div>
+                <div className="mt-1 text-[11px] leading-4 text-slate-600">
+                  {queryOverlay.status === "loading"
+                    ? queryOverlay.message
+                    : `${queryOverlay.matchedCount}/${queryOverlay.inspectedCount} nähtavast alast vastas filtrile. ${queryOverlay.message ?? ""}`}
+                </div>
+              </div>
+              <button
+                className="shrink-0 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 hover:text-slate-950"
+                onClick={() => {
+                  const map = mapRef.current;
+                  if (map) {
+                    setGeojsonSource(map, "query-results", emptyCollection);
+                  }
+                  setQueryOverlay(null);
+                }}
+                type="button"
+              >
+                Puhasta
+              </button>
+            </div>
+          </div>
+        ) : null}
         <div className="glass-panel hidden rounded-lg p-2 shadow-panel sm:block">
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-800">
             <Layers aria-hidden className="size-3.5 text-[var(--forest-700)]" />

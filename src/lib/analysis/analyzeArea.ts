@@ -53,6 +53,76 @@ const changeLabels: Record<ForestChange["changeType"], string> = {
   unknown: "täpsustamata muutus"
 };
 
+const analysisCacheTtlMs = 5 * 60 * 1000;
+const analysisCache = new Map<
+  string,
+  { expiresAt: number; value: AnalysisResult }
+>();
+const partialAnalysisResults = new WeakSet<AnalysisResult>();
+
+function analysisCacheKeys(area: Area) {
+  return [
+    area.cadastralId ? `cadastre:${area.cadastralId}` : null,
+    area.etakId ? `etak:${area.etakId}` : null,
+    area.etakFeatureId ? `etak-feature:${area.etakFeatureId}` : null,
+    `area:${area.id}`
+  ]
+    .filter((key): key is string => Boolean(key));
+}
+
+function cachedAnalysis(area: Area): AnalysisResult | null {
+  for (const key of analysisCacheKeys(area)) {
+    const cached = analysisCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.value;
+    }
+  }
+
+  return null;
+}
+
+function rememberAnalysis(area: Area, value: AnalysisResult) {
+  const cached = {
+    expiresAt: Date.now() + analysisCacheTtlMs,
+    value
+  };
+
+  for (const key of analysisCacheKeys(area)) {
+    analysisCache.set(key, cached);
+  }
+}
+
+async function withAnalysisTimeout<T>({
+  label,
+  promise,
+  fallback,
+  timeoutMs,
+  timedOutSources
+}: {
+  label: string;
+  promise: Promise<T>;
+  fallback: T;
+  timeoutMs: number;
+  timedOutSources: string[];
+}): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const guardedPromise = promise.catch(() => fallback);
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timeout = setTimeout(() => {
+      timedOutSources.push(label);
+      resolve(fallback);
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([guardedPromise, timeoutPromise]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
 function buildEvidence({
   stands,
   notices,
@@ -1417,6 +1487,15 @@ export async function analyzeArea(
     throw new Error(`Unknown area: ${areaId}`);
   }
 
+  const useCache = provider === realDataProvider;
+  if (useCache) {
+    const cached = cachedAnalysis(area);
+    if (cached) {
+      return cached;
+    }
+  }
+
+  const timedOutSources: string[] = [];
   const [
     stands,
     notices,
@@ -1424,15 +1503,50 @@ export async function analyzeArea(
     protectedAreas,
     ecosystemBenefits,
     satelliteSignal
-  ] =
-    await Promise.all([
-      provider.getForestStands(area.geometry, area.id, area),
-      provider.getForestNotices(area.geometry, area.id, area),
-      provider.getForestChanges(area.geometry, area.id, area),
-      provider.getProtectedAreas(area.geometry, area.id, area),
-      provider.getEcosystemBenefits(area.geometry, area.id, area),
-      provider.getSatelliteSignal(area.id)
-    ]);
+  ] = await Promise.all([
+    withAnalysisTimeout<ForestStand[]>({
+      label: "metsaregister-stands",
+      promise: provider.getForestStands(area.geometry, area.id, area),
+      fallback: [],
+      timeoutMs: 4500,
+      timedOutSources
+    }),
+    withAnalysisTimeout<ForestNotice[]>({
+      label: "metsaregister-notices",
+      promise: provider.getForestNotices(area.geometry, area.id, area),
+      fallback: [],
+      timeoutMs: 4500,
+      timedOutSources
+    }),
+    withAnalysisTimeout<ForestChange[]>({
+      label: "forest-changes",
+      promise: provider.getForestChanges(area.geometry, area.id, area),
+      fallback: [],
+      timeoutMs: 900,
+      timedOutSources
+    }),
+    withAnalysisTimeout<ProtectedArea[]>({
+      label: "eelis",
+      promise: provider.getProtectedAreas(area.geometry, area.id, area),
+      fallback: [],
+      timeoutMs: 3500,
+      timedOutSources
+    }),
+    withAnalysisTimeout<EcosystemBenefit[]>({
+      label: "elme",
+      promise: provider.getEcosystemBenefits(area.geometry, area.id, area),
+      fallback: [],
+      timeoutMs: 2500,
+      timedOutSources
+    }),
+    withAnalysisTimeout<SatelliteSignal | null>({
+      label: "satellite-signal",
+      promise: provider.getSatelliteSignal(area.id),
+      fallback: null,
+      timeoutMs: 900,
+      timedOutSources
+    })
+  ]);
 
   const status = determineStatus({
     stands,
@@ -1483,16 +1597,19 @@ export async function analyzeArea(
     changes,
     protectedAreas
   });
-  const aiNarrative = await generateAiNarrative({
-    status,
-    headline,
-    summary,
-    whatHappened,
-    missingInfo,
-    warnings,
-    evidence,
-    publicAudit
-  });
+  const aiNarrative = await generateAiNarrative(
+    {
+      status,
+      headline,
+      summary,
+      whatHappened,
+      missingInfo,
+      warnings,
+      evidence,
+      publicAudit
+    },
+    { allowNetwork: false }
+  );
   const evidencePackage = buildEvidencePackage({
     area,
     stands,
@@ -1508,7 +1625,7 @@ export async function analyzeArea(
     evidencePackage
   });
 
-  return {
+  const result: AnalysisResult = {
     area,
     status,
     confidenceScore,
@@ -1534,11 +1651,34 @@ export async function analyzeArea(
       satelliteSignal
     }
   };
+
+  if (timedOutSources.length > 0) {
+    partialAnalysisResults.add(result);
+  }
+
+  if (useCache && timedOutSources.length === 0) {
+    rememberAnalysis(area, result);
+  }
+
+  return result;
 }
 
 export async function analyzeResolvedArea(
   area: Area,
   provider: DataProvider = realDataProvider
 ): Promise<AnalysisResult> {
+  if (provider === realDataProvider) {
+    const cached = cachedAnalysis(area);
+    if (cached) {
+      return cached;
+    }
+
+    const result = await analyzeArea(area.id, new ResolvedAreaProvider(area, provider));
+    if (!partialAnalysisResults.has(result)) {
+      rememberAnalysis(area, result);
+    }
+    return result;
+  }
+
   return analyzeArea(area.id, new ResolvedAreaProvider(area, provider));
 }

@@ -1,4 +1,4 @@
-import type { Feature, Geometry } from "geojson";
+import type { Feature, FeatureCollection, Geometry } from "geojson";
 
 export type Area = {
   id: string;
@@ -507,6 +507,7 @@ export type AreaQuestionAnswer = {
   cannotSay: string[];
   evidence: AreaAnswerEvidence[];
   evidenceIds: string[];
+  mapAction?: AreaMapAction;
   mapHints: string[];
   followUps: string[];
   sources: DataSourceRef[];
@@ -541,3 +542,106 @@ export type SearchResult = {
 };
 
 export type AreaFeature = Feature<Geometry, Area & Record<string, unknown>>;
+
+export type DataAccessMethod =
+  | "wfs"
+  | "wms"
+  | "rest"
+  | "static_geojson"
+  | "derived";
+
+export type QueryableDataset = {
+  id: string;
+  name: string;
+  provider: string;
+  accessMethod: DataAccessMethod;
+  status: SourceStatus;
+  scope:
+    | "map_view"
+    | "selected_area"
+    | "spatial_overlap"
+    | "national_context";
+  url?: string;
+  provides: string[];
+  filterFields: string[];
+  limitations: string[];
+};
+
+export type AreaQueryFilterId =
+  | "no_protection_overlap"
+  | "protection_overlap"
+  | "inventory_year"
+  | "inventory_before_year"
+  | "ownership_form"
+  | "has_forest_notice"
+  | "no_forest_notice"
+  | "has_wood_raw_material"
+  | "has_carbon_storage"
+  | "no_registry_stands";
+
+export type AreaQueryFilterDefinition = {
+  id: AreaQueryFilterId;
+  label: string;
+  description: string;
+  requiredDatasets: string[];
+  parameters: Array<{
+    id: "year" | "beforeYear" | "ownershipForm";
+    label: string;
+    type: "year" | "ownership";
+    required: boolean;
+  }>;
+  caveat: string;
+};
+
+export type AreaMapAction = {
+  type: "highlight_area_query";
+  filterId: AreaQueryFilterId;
+  label: string;
+  year?: number;
+  beforeYear?: number;
+  ownershipForm?: string;
+  scope: "current_map_view";
+  explanation: string;
+};
+
+export type AreaQueryFeatureProperties = {
+  areaId: string;
+  label: string;
+  filterId: AreaQueryFilterId;
+  matchReason: string;
+  areaHa?: number;
+  cadastralId?: string;
+  ownershipForm?: string;
+  inventoryYears?: number[];
+  protectionOverlapCount?: number;
+  registryStandsCount?: number;
+  forestNoticesCount?: number;
+  ecosystemOverlapCount?: number;
+  checkedSources: string[];
+};
+
+export type AreaQueryFeature = Feature<
+  Geometry,
+  AreaQueryFeatureProperties & Record<string, unknown>
+>;
+
+export type AreaQueryResponse = FeatureCollection<
+  Geometry,
+  AreaQueryFeatureProperties & Record<string, unknown>
+> & {
+  query: {
+    filterId: AreaQueryFilterId;
+    label: string;
+    bbox: [number, number, number, number];
+    inspectedCount: number;
+    matchedCount: number;
+    limit: number;
+    scope: "current_map_view";
+    year?: number;
+    beforeYear?: number;
+    ownershipForm?: string;
+  };
+  datasets: QueryableDataset[];
+  filter: AreaQueryFilterDefinition;
+  caveats: string[];
+};

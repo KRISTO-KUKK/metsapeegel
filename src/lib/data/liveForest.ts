@@ -1,5 +1,6 @@
 import {
   area as turfArea,
+  bbox as turfBbox,
   booleanPointInPolygon,
   point
 } from "@turf/turf";
@@ -15,7 +16,7 @@ import type { Area } from "@/lib/types/forestry";
 
 type WfsFeature = Feature<Geometry | null, Record<string, unknown>>;
 type WfsCollection = FeatureCollection<Geometry | null, Record<string, unknown>>;
-type VisibleForestProperties = {
+export type VisibleForestProperties = {
   etakId?: number;
   etakFeatureId?: string;
   etakType?: string;
@@ -35,10 +36,22 @@ const etakWfsUrl = "https://gsavalik.envir.ee/geoserver/etak/wfs";
 const cadastreWfsUrl = "https://gsavalik.envir.ee/geoserver/kataster/wfs";
 const etakLayer = "etak:e_305_puittaimestik_a";
 const cadastreLayer = "kataster:ky_kehtiv";
-const requestTimeoutMs = 9000;
+const requestTimeoutMs = 6500;
+const responseCacheTtlMs = 5 * 60 * 1000;
+const responseCache = new Map<string, { expiresAt: number; value: WfsCollection }>();
+const inflightRequests = new Map<string, Promise<WfsCollection>>();
 
 function numberValue(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : undefined;
+  }
+
+  return undefined;
 }
 
 function stringValue(value: unknown): string | undefined {
@@ -76,8 +89,21 @@ function splitBbox(
 ) {
   const width = east - west;
   const height = north - south;
-  const columns = width > 4 ? 4 : width > 2 ? 3 : width > 1 ? 2 : 1;
-  const rows = height > 1.5 ? 3 : height > 0.8 ? 2 : 1;
+  const targetCellWidth = width > 4 ? 0.9 : width > 2 ? 0.65 : 0.45;
+  const targetCellHeight = height > 1.6 ? 0.55 : height > 0.8 ? 0.45 : 0.35;
+  let columns = Math.max(1, Math.min(8, Math.ceil(width / targetCellWidth)));
+  let rows = Math.max(1, Math.min(5, Math.ceil(height / targetCellHeight)));
+
+  while (columns * rows > 24) {
+    if (columns >= rows && columns > 1) {
+      columns -= 1;
+    } else if (rows > 1) {
+      rows -= 1;
+    } else {
+      break;
+    }
+  }
+
   const cells: Array<[number, number, number, number]> = [];
 
   for (let column = 0; column < columns; column += 1) {
@@ -111,10 +137,21 @@ async function fetchWfs(
     BBOX: bbox
   }).toString();
 
+  const cacheKey = url.toString();
+  const cached = responseCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  const inflight = inflightRequests.get(cacheKey);
+  if (inflight) {
+    return inflight;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
 
-  try {
+  const request = (async () => {
     const response = await fetch(url, {
       headers: {
         Accept: "application/json"
@@ -126,9 +163,21 @@ async function fetchWfs(
       throw new Error(`WFS request failed with ${response.status}`);
     }
 
-    return (await response.json()) as WfsCollection;
+    const payload = (await response.json()) as WfsCollection;
+    responseCache.set(cacheKey, {
+      expiresAt: Date.now() + responseCacheTtlMs,
+      value: payload
+    });
+    return payload;
+  })();
+
+  inflightRequests.set(cacheKey, request);
+
+  try {
+    return await request;
   } finally {
     clearTimeout(timeout);
+    inflightRequests.delete(cacheKey);
   }
 }
 
@@ -256,6 +305,68 @@ async function findCadastreAt(lng: number, lat: number): Promise<CadastreContext
   return containingFeature ? cadastreFromFeature(containingFeature) : null;
 }
 
+function visibleAreaFromFeature(
+  feature: Feature<Geometry, VisibleForestProperties>,
+  cadastre: CadastreContext | null
+): Area | null {
+  if (!feature.geometry) {
+    return null;
+  }
+
+  const etakId = numberValue(feature.properties.etakId);
+  const etakFeatureId = stringValue(feature.properties.etakFeatureId);
+  const areaHa =
+    numberValue(feature.properties.areaHa) ??
+    roundHa(
+      turfArea({
+        type: "Feature",
+        properties: {},
+        geometry: feature.geometry
+      })
+    );
+  const address = cadastre?.address;
+
+  return {
+    id: `query-etak-${etakId ?? etakFeatureId ?? JSON.stringify(feature.geometry).slice(0, 30)}`,
+    name: address ? `${address} metsaala` : `ETAK mets ${etakId ?? etakFeatureId ?? ""}`,
+    type: "forest",
+    cadastralId: cadastre?.cadastralId,
+    county: cadastre?.county,
+    municipality: cadastre?.municipality,
+    address,
+    landUse: cadastre?.landUse,
+    ownershipForm: cadastre?.ownershipForm,
+    forestHa: areaHa,
+    etakId,
+    etakFeatureId,
+    etakType: stringValue(feature.properties.etakType),
+    dataSource:
+      "Maa- ja Ruumiameti ETAK WFS kaardivaate päring; katastri kontekst leitakse geomeetria keskpunkti järgi.",
+    areaHa,
+    geometry: feature.geometry
+  };
+}
+
+export async function resolveVisibleForestFeature(
+  feature: Feature<Geometry, VisibleForestProperties>
+): Promise<Area | null> {
+  if (!feature.geometry) {
+    return null;
+  }
+
+  const [west, south, east, north] = turfBbox({
+    type: "Feature",
+    properties: {},
+    geometry: feature.geometry
+  });
+  const cadastre = await findCadastreAt(
+    (west + east) / 2,
+    (south + north) / 2
+  ).catch(() => null);
+
+  return visibleAreaFromFeature(feature, cadastre);
+}
+
 export async function findLiveForestAt(
   lng: number,
   lat: number
@@ -288,7 +399,7 @@ export async function findLiveForestsInBbox(
   count = 450
 ): Promise<FeatureCollection<Geometry, VisibleForestProperties>> {
   const cells = splitBbox(west, south, east, north);
-  const cellCount = Math.max(60, Math.ceil(count / cells.length));
+  const cellCount = Math.max(90, Math.min(520, Math.ceil((count / cells.length) * 1.35)));
   const collections = await Promise.allSettled(
     cells.map((cell) =>
       fetchWfs(

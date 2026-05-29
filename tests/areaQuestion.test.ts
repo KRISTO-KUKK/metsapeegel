@@ -731,4 +731,46 @@ describe("generateAreaQuestionAnswer", () => {
     expect(answer.explanation).toContain("muutusetõend");
     expect(answer.evidenceIds).toContain("registry-stands");
   });
+
+  it("returns a map action for broad no-protection area queries", async () => {
+    const answer = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ protectedAreas: 1 }),
+      question: "Millised alad EI OLE seotud ühegi kaitsealaga?"
+    });
+
+    expect(answer.mapAction?.type).toBe("highlight_area_query");
+    expect(answer.mapAction?.filterId).toBe("no_protection_overlap");
+    expect(answer.shortAnswer).toContain("kaardil");
+  });
+
+  it("returns a map action for inventory year area queries", async () => {
+    const answer = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ stands: 1 }),
+      question: "Näita alad kus on 2024 aastal inventuuri tehtud"
+    });
+
+    expect(answer.mapAction?.type).toBe("highlight_area_query");
+    expect(answer.mapAction?.filterId).toBe("inventory_year");
+    expect(answer.mapAction?.year).toBe(2024);
+  });
+
+  it("returns map actions for ownership, notice and ELME queries", async () => {
+    const ownership = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ ownershipForm: "Eraomand" }),
+      question: "Leia riigiomandis alad"
+    });
+    const notices = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ notices: 1 }),
+      question: "Naita alad kus pole metsateatist"
+    });
+    const wood = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ woodRawMaterial: 2 }),
+      question: "Naita puidutooraine kattuvusega alasid"
+    });
+
+    expect(ownership.mapAction?.filterId).toBe("ownership_form");
+    expect(ownership.mapAction?.ownershipForm).toBe("Riigiomand");
+    expect(notices.mapAction?.filterId).toBe("no_forest_notice");
+    expect(wood.mapAction?.filterId).toBe("has_wood_raw_material");
+  });
 });

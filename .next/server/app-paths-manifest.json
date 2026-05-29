@@ -1,12 +1,6 @@
 {
-  "/api/analyze/[areaId]/route": "app/api/analyze/[areaId]/route.js",
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/ask/route": "app/api/ask/route.js",
   "/api/forests-bbox/route": "app/api/forests-bbox/route.js",
-  "/api/forest-at/route": "app/api/forest-at/route.js",
+  "/api/analyze-feature/route": "app/api/analyze-feature/route.js",
   "/api/search/route": "app/api/search/route.js",
-  "/api/generate-summary/route": "app/api/generate-summary/route.js",
-  "/api/audit-sample/route": "app/api/audit-sample/route.js",
-  "/audit/page": "app/audit/page.js",
   "/page": "app/page.js"
 }

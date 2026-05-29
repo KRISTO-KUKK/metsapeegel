@@ -12,15 +12,18 @@ function parseBbox(value: string | null): [number, number, number, number] | nul
   }
 
   const [west, south, east, north] = parts;
-  const insideEstoniaEnvelope =
-    west >= 20.5 &&
-    east <= 30 &&
-    south >= 56.7 &&
-    north <= 60.5 &&
-    west < east &&
-    south < north;
+  if (west >= east || south >= north) {
+    return null;
+  }
 
-  return insideEstoniaEnvelope ? [west, south, east, north] : null;
+  const clippedWest = Math.max(20.5, west);
+  const clippedSouth = Math.max(56.7, south);
+  const clippedEast = Math.min(30, east);
+  const clippedNorth = Math.min(60.5, north);
+
+  return clippedWest < clippedEast && clippedSouth < clippedNorth
+    ? [clippedWest, clippedSouth, clippedEast, clippedNorth]
+    : null;
 }
 
 function parseCount(value: string | null): number {
@@ -29,7 +32,7 @@ function parseCount(value: string | null): number {
     return 650;
   }
 
-  return Math.max(150, Math.min(1800, Math.round(count)));
+  return Math.max(150, Math.min(4200, Math.round(count)));
 }
 
 export async function GET(request: NextRequest) {

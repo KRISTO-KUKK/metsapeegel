@@ -51,7 +51,8 @@ const cadastreWfsUrl = "https://gsavalik.envir.ee/geoserver/kataster/wfs";
 const eelisWfsUrl = "https://gsavalik.envir.ee/geoserver/eelis/ows";
 const elmeWfsUrl = "https://elmegs.envir.ee/geoserver/elme/ows";
 const cadastreLayer = "kataster:ky_kehtiv";
-const requestTimeoutMs = 12000;
+const requestTimeoutMs = 5500;
+const responseCacheTtlMs = 5 * 60 * 1000;
 const cadastralIdPattern = /^\d{5}:\d{3}:\d{4}$/;
 
 const eelisLayers: EelisLayerConfig[] = [
@@ -133,6 +134,8 @@ proj4.defs(
 );
 
 let classifierPromise: Promise<ClassifierMap> | null = null;
+const responseCache = new Map<string, { expiresAt: number; value: unknown }>();
+const inflightRequests = new Map<string, Promise<unknown>>();
 
 function objectValue(value: unknown): JsonObject | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -191,10 +194,21 @@ function cqlLiteral(value: string): string {
 }
 
 async function fetchJson<T>(url: URL): Promise<T> {
+  const cacheKey = url.toString();
+  const cached = responseCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value as T;
+  }
+
+  const inflight = inflightRequests.get(cacheKey);
+  if (inflight) {
+    return inflight as Promise<T>;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
 
-  try {
+  const request = (async () => {
     const response = await fetch(url, {
       cache: "no-store",
       headers: {
@@ -207,9 +221,21 @@ async function fetchJson<T>(url: URL): Promise<T> {
       throw new Error(`Request failed with ${response.status}`);
     }
 
-    return (await response.json()) as T;
+    const payload = (await response.json()) as T;
+    responseCache.set(cacheKey, {
+      expiresAt: Date.now() + responseCacheTtlMs,
+      value: payload
+    });
+    return payload;
+  })();
+
+  inflightRequests.set(cacheKey, request);
+
+  try {
+    return await request;
   } finally {
     clearTimeout(timeout);
+    inflightRequests.delete(cacheKey);
   }
 }
 
@@ -600,10 +626,30 @@ function asPolygonFeature(
   };
 }
 
+function bboxesOverlap(a: Geometry, b: Geometry): boolean {
+  try {
+    const [aWest, aSouth, aEast, aNorth] = turfBbox({
+      type: "Feature",
+      properties: {},
+      geometry: a
+    });
+    const [bWest, bSouth, bEast, bNorth] = turfBbox({
+      type: "Feature",
+      properties: {},
+      geometry: b
+    });
+
+    return aWest <= bEast && aEast >= bWest && aSouth <= bNorth && aNorth >= bSouth;
+  } catch {
+    return false;
+  }
+}
+
 function protectedOverlapHa(
   areaGeometry: Geometry,
   protectedGeometry: Geometry,
-  selectedAreaHa?: number
+  selectedAreaHa?: number,
+  approximate = false
 ): number {
   if (!isPolygonGeometry(areaGeometry) || !isPolygonGeometry(protectedGeometry)) {
     return 0;
@@ -611,6 +657,15 @@ function protectedOverlapHa(
 
   const areaFeature = asPolygonFeature(areaGeometry);
   const protectedFeature = asPolygonFeature(protectedGeometry);
+
+  if (approximate) {
+    return bboxesOverlap(areaGeometry, protectedGeometry)
+      ? Math.min(
+          roundHa(turfArea(protectedFeature)),
+          selectedAreaHa ?? roundHa(turfArea(areaFeature))
+        )
+      : 0;
+  }
 
   try {
     const intersection = intersect({
@@ -640,9 +695,16 @@ function protectedAreaFromFeature(
   feature: WfsFeature,
   layerConfig: EelisLayerConfig,
   areaGeometry: Geometry,
-  selectedAreaHa?: number
+  selectedAreaHa?: number,
+  approximateOverlap = false
 ): ProtectedArea | null {
-  if (!feature.geometry || !geometriesOverlap(areaGeometry, feature.geometry)) {
+  const overlaps = feature.geometry
+    ? approximateOverlap
+      ? bboxesOverlap(areaGeometry, feature.geometry)
+      : geometriesOverlap(areaGeometry, feature.geometry)
+    : false;
+
+  if (!feature.geometry || !overlaps) {
     return null;
   }
 
@@ -665,7 +727,12 @@ function protectedAreaFromFeature(
     name,
     type: layerConfig.type,
     publicDetailLevel: "full",
-    overlapHa: protectedOverlapHa(areaGeometry, feature.geometry, selectedAreaHa),
+    overlapHa: protectedOverlapHa(
+      areaGeometry,
+      feature.geometry,
+      selectedAreaHa,
+      approximateOverlap
+    ),
     geometry: feature.geometry
   };
 }
@@ -770,9 +837,16 @@ function ecosystemBenefitFromFeature(
   feature: WfsFeature,
   layerConfig: ElmeLayerConfig,
   areaGeometry: Geometry,
-  selectedAreaHa?: number
+  selectedAreaHa?: number,
+  approximateOverlap = false
 ): EcosystemBenefit | null {
-  if (!feature.geometry || !geometriesOverlap(areaGeometry, feature.geometry)) {
+  const overlaps = feature.geometry
+    ? approximateOverlap
+      ? bboxesOverlap(areaGeometry, feature.geometry)
+      : geometriesOverlap(areaGeometry, feature.geometry)
+    : false;
+
+  if (!feature.geometry || !overlaps) {
     return null;
   }
 
@@ -790,7 +864,8 @@ function ecosystemBenefitFromFeature(
   const overlapHa = protectedOverlapHa(
     areaGeometry,
     feature.geometry,
-    selectedAreaHa
+    selectedAreaHa,
+    approximateOverlap
   );
 
   return {
@@ -936,6 +1011,7 @@ export class RealDataProvider implements DataProvider {
     area?: Area
   ): Promise<ProtectedArea[]> {
     const bbox = bboxForGeometry(areaGeometry);
+    const approximateOverlap = (area?.areaHa ?? 0) >= 750;
     const layerResults = await Promise.all(
       eelisLayers.map(async (layerConfig) => {
         try {
@@ -952,7 +1028,8 @@ export class RealDataProvider implements DataProvider {
                 feature,
                 layerConfig,
                 areaGeometry,
-                area?.areaHa
+                area?.areaHa,
+                approximateOverlap
               )
             )
             .filter((item): item is ProtectedArea => Boolean(item));
@@ -978,6 +1055,7 @@ export class RealDataProvider implements DataProvider {
     area?: Area
   ): Promise<EcosystemBenefit[]> {
     const bbox = bboxForGeometry(areaGeometry);
+    const approximateOverlap = (area?.areaHa ?? 0) >= 750;
     const layerResults = await Promise.all(
       elmeLayers.map(async (layerConfig) => {
         try {
@@ -994,7 +1072,8 @@ export class RealDataProvider implements DataProvider {
                 feature,
                 layerConfig,
                 areaGeometry,
-                area?.areaHa
+                area?.areaHa,
+                approximateOverlap
               )
             )
             .filter((item): item is EcosystemBenefit => Boolean(item));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import type { Feature, Geometry } from "geojson";
 import { AnalysisPanel } from "@/components/AnalysisPanel";
 import { AssistantPanel } from "@/components/AssistantPanel";
 import { MapView } from "@/components/MapView";
@@ -71,10 +72,49 @@ export default function Home() {
     []
   );
 
+  const selectForestFeature = useCallback(
+    async (feature: Feature<Geometry, Record<string, unknown>>) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/analyze-feature", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ feature })
+        });
+
+        if (response.status === 404) {
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Metsaala pÃ¤ring ebaÃµnnestus.");
+        }
+
+        const payload = (await response.json()) as { analysis: AnalysisResult };
+        setSelectedAreaId(payload.analysis.area.id);
+        setAnalysis(payload.analysis);
+      } catch (cause) {
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Metsaala pÃ¤ring ebaÃµnnestus."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
   return (
     <main className="relative h-dvh min-h-[720px] overflow-hidden bg-[var(--sage-50)]">
       <MapView
         analysis={analysis}
+        onSelectForestFeature={selectForestFeature}
         onSelectForestAt={selectForestAt}
         selectedAreaId={selectedAreaId}
       />

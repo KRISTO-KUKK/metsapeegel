@@ -48,6 +48,12 @@ const sourceShortLabels: Record<string, string> = {
 };
 
 const suggestionChips = [
+  "Naita kaitsekattuvuseta alasid",
+  "Naita kaitsekattuvusega alasid",
+  "Naita 2024 inventuuriga alasid",
+  "Naita riigiomandis alasid",
+  "Naita metsateatisega alasid",
+  "Naita puidutooraine kattuvusega alasid",
   "Võta kokku, mis siin tõenäoliselt toimunud on",
   "Palju on puidutooraine kattuvusi?",
   "Kas siin on raie kohta tõendeid?",
@@ -315,6 +321,13 @@ export function AssistantPanel({
       }
 
       const payload = (await response.json()) as AskResponse;
+      if (payload.answer.mapAction) {
+        window.dispatchEvent(
+          new CustomEvent("metsapeegel:area-query", {
+            detail: payload.answer.mapAction
+          })
+        );
+      }
       setTurns((current) =>
         current.map((turn) =>
           turn.id === turnId

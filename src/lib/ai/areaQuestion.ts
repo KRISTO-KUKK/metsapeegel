@@ -1,6 +1,7 @@
 import type {
   AnalysisResult,
   AreaAnswerEvidence,
+  AreaMapAction,
   AreaQuestionAnswer,
   AnswerVerdict,
   EvidenceTone,
@@ -195,6 +196,230 @@ function detectedIntent(question: string) {
       "elupaik"
     ])
   };
+}
+
+function mapActionForQuestion(question: string): AreaMapAction | undefined {
+  const normalized = normalizeQuestion(question);
+  const asksForMapSet = includesAny(normalized, [
+    "näita",
+    "naita",
+    "millised alad",
+    "otsi alasid",
+    "highlight",
+    "märgi",
+    "margi",
+    "kaardil"
+  ]);
+
+  if (!asksForMapSet) {
+    return undefined;
+  }
+
+  const asksNoProtection =
+    includesAny(normalized, ["ei ole", "pole", "ilma", "puudub"]) &&
+    includesAny(normalized, ["kaitse", "natura", "vep", "piirang"]);
+
+  if (asksNoProtection) {
+    return {
+      type: "highlight_area_query",
+      filterId: "no_protection_overlap",
+      label: "Alad ilma kaitsekattuvuseta",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates ETAK metsaalad, millele ühendatud avalikud EELIS kihid ei tagasta kaitse-, Natura-, piirangu-, VEP- ega elupaigakattuvust."
+    };
+  }
+
+  const inventoryYear =
+    normalized.match(/(?:inventuur|inventuuri|inventeeritud)[^\d]*(20\d{2}|19\d{2})/)?.[1] ??
+    normalized.match(/(20\d{2}|19\d{2})[^\n.]{0,40}(?:inventuur|inventuuri|inventeeritud)/)?.[1];
+
+  if (inventoryYear) {
+    const year = Number(inventoryYear);
+    return {
+      type: "highlight_area_query",
+      filterId: "inventory_year",
+      label: `${year}. aasta inventuuriga alad`,
+      year,
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille seotud Metsaregistri eraldistel on see inventuuriaasta."
+    };
+  }
+
+  return undefined;
+}
+
+function mapActionForQuestionV2(question: string): AreaMapAction | undefined {
+  const normalized = normalizeQuestion(question);
+  const asksForMapSet = includesAny(normalized, [
+    "nÃ¤ita",
+    "naita",
+    "leia",
+    "filtreeri",
+    "millised alad",
+    "mis alad",
+    "otsi alasid",
+    "highlight",
+    "mÃ¤rgi",
+    "margi",
+    "kaardil",
+    "kus on",
+    "kus pole"
+  ]);
+
+  if (!asksForMapSet) {
+    return undefined;
+  }
+
+  const missingTerms = ["ei ole", "pole", "ilma", "puudub"];
+  const asksMissing = includesAny(normalized, missingTerms);
+
+  if (
+    asksMissing &&
+    includesAny(normalized, ["kaitse", "natura", "vep", "piirang"])
+  ) {
+    return {
+      type: "highlight_area_query",
+      filterId: "no_protection_overlap",
+      label: "Alad ilma kaitsekattuvuseta",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates ETAK metsaalad, millele uhendatud avalikud EELIS kihid ei tagasta kaitsekattuvust."
+    };
+  }
+
+  if (
+    includesAny(normalized, ["kaitse", "natura", "vep", "piirang"]) &&
+    !asksMissing
+  ) {
+    return {
+      type: "highlight_area_query",
+      filterId: "protection_overlap",
+      label: "Kaitsekattuvusega alad",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates ETAK metsaalad, millele uhendatud avalikud EELIS kihid tagastavad kaitsekattuvuse."
+    };
+  }
+
+  const inventoryBeforeYear =
+    normalized.match(/(?:inventuur|inventuuri|inventeeritud|andmed)[^\d]*(?:enne|vanem kui|vanemad kui)[^\d]*(20\d{2}|19\d{2})/)?.[1] ??
+    normalized.match(/(?:enne|vanem kui|vanemad kui)[^\d]*(20\d{2}|19\d{2})[^\n.]{0,50}(?:inventuur|inventuuri|inventeeritud|andmed)/)?.[1];
+
+  if (inventoryBeforeYear) {
+    const beforeYear = Number(inventoryBeforeYear);
+    return {
+      type: "highlight_area_query",
+      filterId: "inventory_before_year",
+      label: `Inventuur enne ${beforeYear}`,
+      beforeYear,
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille Metsaregistri eraldiste inventuuriaasta on enne kusitud aastat."
+    };
+  }
+
+  const inventoryYear =
+    normalized.match(/(?:inventuur|inventuuri|inventeeritud)[^\d]*(20\d{2}|19\d{2})/)?.[1] ??
+    normalized.match(/(20\d{2}|19\d{2})[^\n.]{0,40}(?:inventuur|inventuuri|inventeeritud)/)?.[1];
+
+  if (inventoryYear) {
+    const year = Number(inventoryYear);
+    return {
+      type: "highlight_area_query",
+      filterId: "inventory_year",
+      label: `${year}. aasta inventuuriga alad`,
+      year,
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille seotud Metsaregistri eraldistel on see inventuuriaasta."
+    };
+  }
+
+  if (includesAny(normalized, ["riigiomand", "riigimaa", "riigi omand"])) {
+    return {
+      type: "highlight_area_query",
+      filterId: "ownership_form",
+      label: "Riigiomandis alad",
+      ownershipForm: "Riigiomand",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille katastri avalik omandivorm on Riigiomand."
+    };
+  }
+
+  if (includesAny(normalized, ["eraomand", "eramaa", "era omand"])) {
+    return {
+      type: "highlight_area_query",
+      filterId: "ownership_form",
+      label: "Eraomandis alad",
+      ownershipForm: "Eraomand",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille katastri avalik omandivorm on Eraomand."
+    };
+  }
+
+  if (asksMissing && includesAny(normalized, ["teatis", "metsateatis"])) {
+    return {
+      type: "highlight_area_query",
+      filterId: "no_forest_notice",
+      label: "Metsateatiseta alad",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille kohta Metsaregistri avalik paring ei tagasta metsateatist."
+    };
+  }
+
+  if (includesAny(normalized, ["teatis", "metsateatis"])) {
+    return {
+      type: "highlight_area_query",
+      filterId: "has_forest_notice",
+      label: "Metsateatisega alad",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille kohta Metsaregistri avalik paring tagastab metsateatise."
+    };
+  }
+
+  if (includesAny(normalized, ["puidutooraine", "puidu", "puit"])) {
+    return {
+      type: "highlight_area_query",
+      filterId: "has_wood_raw_material",
+      label: "Puidutooraine ELME kattuvusega alad",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, millele ELME puidutooraine kiht tagastab kattuvuse."
+    };
+  }
+
+  if (includesAny(normalized, ["sÃ¼sinik", "susinik", "carbon"])) {
+    return {
+      type: "highlight_area_query",
+      filterId: "has_carbon_storage",
+      label: "Susiniku ELME kattuvusega alad",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, millele ELME susinikuvaru kiht tagastab kattuvuse."
+    };
+  }
+
+  if (
+    includesAny(normalized, ["eraldis", "metsaregister"]) &&
+    asksMissing
+  ) {
+    return {
+      type: "highlight_area_query",
+      filterId: "no_registry_stands",
+      label: "Metsaregistri eraldisteta alad",
+      scope: "current_map_view",
+      explanation:
+        "Filtreerin praeguses kaardivaates metsaalad, mille seotud katastri kohta Metsaregister ei tagasta eraldisi."
+    };
+  }
+
+  return undefined;
 }
 
 function uniqueRows(rows: Array<string | undefined | null>) {
@@ -645,6 +870,7 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
   const hasChangeProof = harvestHasChangeProof(analysis);
   const hasProtection = normalized.protectionSummary.length > 0;
   const focus = questionFocusForAnalysis(analysis, question);
+  const mapAction = mapActionForQuestionV2(question) ?? mapActionForQuestion(question);
 
   let verdict: AnswerVerdict = "supported";
   let shortAnswer =
@@ -655,7 +881,29 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
   let cannotSay = limitsFromNormalized(normalized);
   let evidenceIds = defaultEvidenceIds(normalized);
 
-  if (focus) {
+  if (mapAction) {
+    verdict = "partial";
+    shortAnswer = `Saan selle kaardil esile tõsta praeguse vaate ulatuses: ${mapAction.label}.`;
+    explanation = [
+      mapAction.explanation,
+      "See ei ole veel üle-Eestiline eelindeks; backend kontrollib nähtavaid ETAK metsaalasid ja kasutab ainult ühendatud ametlikke allikaid."
+    ].join("\n");
+    canSay = [
+      "Tulemused jäävad kaardile alles, et saaksid järjest esile tõstetud alasid klõpsida.",
+      "Kui liigutad kaarti või suumid teise piirkonda, käivita sama küsimus uuesti selle vaate kohta."
+    ];
+    cannotSay = [
+      "Ma ei väida, et need on kõik Eesti alad, mis tingimusele vastavad.",
+      "Kaitsekattuvuse puudumine tähendab ainult, et ühendatud avalikud EELIS kihid ei tagastanud kattuvust.",
+      "Inventuuriaasta filter sõltub sellest, kas ala õnnestub siduda katastri ja Metsaregistri eraldistega."
+    ];
+    evidenceIds = evidenceById(
+      normalized,
+      mapAction.filterId === "inventory_year"
+        ? ["registry-stands"]
+        : ["protection-summary"]
+    );
+  } else if (focus) {
     verdict = "supported";
     shortAnswer = focus.shortAnswer;
     explanation = focus.explanation;
@@ -889,7 +1137,11 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
     cannotSay,
     evidence: evidenceFromAnalysis(analysis),
     evidenceIds,
+    mapAction,
     mapHints: [
+      mapAction
+        ? `Käivitan kaardifiltri: ${mapAction.label}.`
+        : undefined,
       "Valitud metsaala on kaardil tugevama rohelise täite ja kontuuriga.",
       hasProtection
         ? "Kaitsekattuvuse kihti saab tõendichipist esile tõsta."
@@ -897,7 +1149,7 @@ function answerForIntent(input: AreaQuestionInput): AreaQuestionAnswer {
       !hasChangeProof
         ? "Metsamuutuste/LiDAR tõend on piiranguna nähtav."
         : "Muutusetõend on tõendipakis olemas."
-    ],
+    ].filter((hint): hint is string => Boolean(hint)),
     followUps: [
       "Kas siin on raie kohta tõendeid?",
       "Mis andmed on puudu?",
@@ -1273,6 +1525,10 @@ export async function generateAreaQuestionAnswer(
 ): Promise<AreaQuestionAnswer> {
   const fallback = answerForIntent(input);
   const provider = requestedProvider();
+
+  if (fallback.mapAction) {
+    return fallback;
+  }
 
   if (provider === "template" || provider === "ollama") {
     return provider === "ollama"
