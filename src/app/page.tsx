@@ -120,8 +120,8 @@ export default function Home() {
       />
       <div className="map-vignette" />
 
-      <header className="pointer-events-none fixed left-0 right-0 top-0 z-30 px-4 pt-3 sm:px-6">
-        <div className="header-shell pointer-events-auto mx-auto flex w-full max-w-4xl flex-col gap-2 rounded-lg px-3 py-2 sm:w-fit sm:max-w-[calc(100vw-3rem)] sm:flex-row sm:items-center sm:gap-3">
+      <header className="pointer-events-none fixed left-3 top-3 z-30 w-[calc(100vw-1.5rem)] sm:left-5 sm:w-auto">
+        <div className="header-shell pointer-events-auto flex w-full flex-col gap-2 rounded-lg px-3 py-2 sm:w-fit sm:max-w-[calc(100vw-2.5rem)] sm:flex-row sm:items-center sm:gap-3">
           <div className="flex min-w-0 shrink-0 items-center">
             <img
               alt="Metsatark"

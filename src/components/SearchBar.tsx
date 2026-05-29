@@ -75,7 +75,7 @@ export function SearchBar({
   }
 
   return (
-    <div className="relative w-full sm:w-[430px] sm:flex-none" ref={wrapperRef}>
+    <div className="relative w-full sm:w-[260px] sm:flex-none" ref={wrapperRef}>
       <form
         className="flex h-10 items-center gap-2 rounded-md border border-white/70 bg-white/90 px-3 shadow-sm"
         onSubmit={submit}

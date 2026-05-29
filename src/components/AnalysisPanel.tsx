@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ChevronDown,
   Database,
-  Download,
   FileText,
   Info,
   Layers,
@@ -15,7 +14,6 @@ import {
   Sparkles
 } from "lucide-react";
 import clsx from "clsx";
-import { downloadCadastreSummary } from "@/lib/export/cadastreSummary";
 import type {
   AnalysisResult,
   NormalizedEvidenceItem,
@@ -769,14 +767,6 @@ export function AnalysisPanel({
               <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
                 {loadedSourceCount}/{analysis.normalizedEvidence.sourceStatus.length} allikat laetud
               </span>
-              <button
-                className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-[var(--forest-800)] hover:ring-[var(--forest-200)]"
-                onClick={() => downloadCadastreSummary(analysis)}
-                type="button"
-              >
-                <Download aria-hidden className="size-3.5" />
-                Laadi kokkuvõte
-              </button>
             </div>
             <h2 className="text-xl font-semibold leading-7 text-slate-950">
               {analysis.normalizedEvidence.area.title}
