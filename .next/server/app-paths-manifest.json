@@ -1,5 +1,0 @@
-{
-  "/api/analyze-feature/route": "app/api/analyze-feature/route.js",
-  "/api/forests-bbox/route": "app/api/forests-bbox/route.js",
-  "/page": "app/page.js"
-}
