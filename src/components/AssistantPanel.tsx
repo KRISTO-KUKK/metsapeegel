@@ -369,7 +369,7 @@ export function AssistantPanel({
   }
 
   return (
-    <aside className="fixed left-3 right-3 top-40 z-20 flex max-h-[27dvh] flex-col overflow-hidden rounded-lg glass-panel shadow-panel sm:bottom-5 sm:left-5 sm:right-auto sm:top-24 sm:z-10 sm:max-h-none sm:w-[420px]">
+    <aside className="assistant-panel fixed left-3 right-3 top-40 z-20 flex max-h-[27dvh] flex-col overflow-hidden rounded-lg shadow-panel sm:bottom-5 sm:left-5 sm:right-auto sm:top-24 sm:z-10 sm:max-h-none sm:w-[420px]">
       <div className="shrink-0 border-b border-white/70 px-4 py-3">
         <div className="flex items-center gap-2">
           <Bot aria-hidden className="size-4 text-[var(--forest-700)]" />
@@ -447,7 +447,7 @@ export function AssistantPanel({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="shrink-0 border-t border-white/70 bg-white/72 px-3 py-3 backdrop-blur">
+      <div className="shrink-0 bg-transparent px-3 py-3">
         <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
           {suggestionChips.map((item) => (
             <button
