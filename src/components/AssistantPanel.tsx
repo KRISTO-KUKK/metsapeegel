@@ -401,9 +401,6 @@ function AnswerMessage({
     );
   }
 
-  const isRealAi = answer.mode === "openai";
-  const showStructuredDetails = !isRealAi || answer.status === "fallback";
-
   return (
     <article className="space-y-2">
       <div className="ml-auto max-w-[86%] rounded-2xl rounded-br-md bg-[var(--forest-700)] px-3 py-2 text-sm leading-5 text-white shadow-sm">
@@ -432,26 +429,6 @@ function AnswerMessage({
             className="mt-1 text-slate-700"
             text={answer.explanation}
           />
-        ) : null}
-
-        {showStructuredDetails && answer.canSay.length > 0 ? (
-          <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
-            <ul className="space-y-1 text-xs leading-5 text-slate-700">
-              {answer.canSay.slice(0, 4).map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {showStructuredDetails && answer.cannotSay.length > 0 ? (
-          <div className="mt-2 rounded-xl bg-amber-50/70 px-3 py-2 ring-1 ring-amber-100">
-            <ul className="space-y-1 text-xs leading-5 text-amber-950">
-              {answer.cannotSay.slice(0, 3).map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
         ) : null}
 
         <EvidenceChips analysis={analysis} answer={answer} />
