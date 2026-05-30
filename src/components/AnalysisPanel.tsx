@@ -11,6 +11,7 @@ import {
   Layers,
   Loader2,
   MapPinned,
+  Satellite,
   ShieldAlert
 } from "lucide-react";
 import clsx from "clsx";
@@ -21,6 +22,8 @@ import type {
   NormalizedInterpretationBlock,
   NormalizedProtectionGroup,
   NormalizedSourceStatus,
+  SentinelComparisonImage,
+  SentinelComparisonState,
   SourceStatus
 } from "@/lib/types/forestry";
 import { downloadCadastreSummary } from "@/lib/export/cadastreSummary";
@@ -262,6 +265,7 @@ const sourceToneClass: Record<string, string> = {
   metsaregister: "border-lime-100 bg-lime-50/80",
   eelis: "border-indigo-100 bg-indigo-50/80",
   elme: "border-teal-100 bg-teal-50/80",
+  "sentinel-comparison": "border-cyan-100 bg-cyan-50/80",
   "forest-changes": "border-amber-100 bg-amber-50/80",
   gaps: "border-amber-100 bg-amber-50/80"
 };
@@ -318,6 +322,116 @@ function SourceBlock({
         {source ? <StatusPill status={source.status} /> : null}
       </div>
       <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
+
+function SentinelImagePreview({
+  title,
+  image
+}: {
+  title: string;
+  image: SentinelComparisonImage;
+}) {
+  return (
+    <div className="min-w-0 rounded-md border border-cyan-100 bg-white/80 p-2">
+      <div className="mb-1 flex items-center justify-between gap-2 text-[11px] leading-4 text-slate-600">
+        <span className="font-semibold text-slate-900">{title}</span>
+        <span>{image.date}</span>
+      </div>
+      <img
+        alt={`${title} Sentinel pilt ${image.date}`}
+        className="aspect-[2/1] w-full rounded object-cover ring-1 ring-slate-200"
+        src={image.imageUrl}
+      />
+      <p className="mt-1 text-[11px] leading-4 text-slate-600">
+        skoor {image.score.toFixed(2)} · pilvisus {Math.round(image.cloudRatio * 100)}%
+      </p>
+    </div>
+  );
+}
+
+function SentinelComparisonSource({
+  state,
+  onSearch
+}: {
+  state: SentinelComparisonState;
+  onSearch: () => void;
+}) {
+  const status =
+    state.status === "loaded"
+      ? "laetud"
+      : state.status === "loading"
+        ? "otsin"
+        : state.status === "error"
+          ? "viga"
+          : "päringuta";
+
+  return (
+    <section
+      className={clsx(
+        "scroll-mt-28 rounded-lg border px-3 py-3 transition-shadow",
+        sourceToneClass["sentinel-comparison"]
+      )}
+      id="source-block-sentinel-comparison"
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Satellite aria-hidden className="size-4 shrink-0 text-slate-700" />
+            <h3 className="text-sm font-semibold text-slate-950">
+              Sentinel võrdluspildid
+            </h3>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-600">
+            ESTHubi kuupäevakataloog ja Maa-ameti Sentinel WMS; pildid otsitakse
+            ainult nupuvajutusega.
+          </p>
+        </div>
+        <span className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-cyan-900 ring-1 ring-cyan-200">
+          {status}
+        </span>
+      </div>
+
+      <button
+        className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[var(--forest-700)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--forest-800)] disabled:cursor-not-allowed disabled:bg-slate-300"
+        disabled={state.status === "loading"}
+        onClick={onSearch}
+        type="button"
+      >
+        {state.status === "loading" ? (
+          <Loader2 aria-hidden className="size-4 animate-spin" />
+        ) : (
+          <Satellite aria-hidden className="size-4" />
+        )}
+        otsi võrdluspilte
+      </button>
+
+      {state.status === "error" ? (
+        <p className="mt-2 rounded-md bg-red-50 px-2 py-2 text-xs leading-5 text-red-800 ring-1 ring-red-200">
+          {state.message}
+        </p>
+      ) : null}
+
+      {state.status === "loaded" ? (
+        <div className="mt-3 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <SentinelImagePreview
+              image={state.result.currentMonth.selected}
+              title="Praegune kuu"
+            />
+            <SentinelImagePreview
+              image={state.result.previousMonth.selected}
+              title="Eelmine kuu"
+            />
+          </div>
+          <p className="text-[11px] leading-4 text-slate-600">
+            BBOX EPSG:3301 {state.result.mapbox}. Skaneeritud kandidaate: praegune
+            kuu {state.result.currentMonth.candidatesScanned}, eelmine kuu{" "}
+            {state.result.previousMonth.candidatesScanned}.
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -469,11 +583,15 @@ function TechnicalDetails({ analysis }: { analysis: AnalysisResult }) {
 function SourceBasedAnalysis({
   analysis,
   highlightedSourceId,
-  highlightedTargetId
+  highlightedTargetId,
+  onSearchSentinelComparison,
+  sentinelComparison
 }: {
   analysis: AnalysisResult;
   highlightedSourceId: string | null;
   highlightedTargetId: string | null;
+  onSearchSentinelComparison: () => void;
+  sentinelComparison: SentinelComparisonState;
 }) {
   const disconnectedSources = analysis.normalizedEvidence.sourceStatus.filter(
     (source) => source.status !== "loaded"
@@ -597,6 +715,11 @@ function SourceBasedAnalysis({
         <EcosystemDetails analysis={analysis} />
       </SourceBlock>
 
+      <SentinelComparisonSource
+        onSearch={onSearchSentinelComparison}
+        state={sentinelComparison}
+      />
+
       <section
         className={clsx(
           "rounded-lg border px-3 py-3",
@@ -674,11 +797,15 @@ function SourceBasedAnalysis({
 export function AnalysisPanel({
   analysis,
   isLoading,
-  error
+  error,
+  onSearchSentinelComparison,
+  sentinelComparison
 }: {
   analysis: AnalysisResult | null;
   isLoading: boolean;
   error: string | null;
+  onSearchSentinelComparison: () => void;
+  sentinelComparison: SentinelComparisonState;
 }) {
   const [highlightedTargetId, setHighlightedTargetId] = useState<string | null>(
     null
@@ -778,6 +905,8 @@ export function AnalysisPanel({
               analysis={analysis}
               highlightedSourceId={highlightedSourceId}
               highlightedTargetId={highlightedTargetId}
+              onSearchSentinelComparison={onSearchSentinelComparison}
+              sentinelComparison={sentinelComparison}
             />
           ) : null}
           {/*

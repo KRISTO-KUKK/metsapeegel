@@ -10,7 +10,11 @@ import {
   NationalStatsPanel
 } from "@/components/NationalStatsPanel";
 import { SearchBar } from "@/components/SearchBar";
-import type { AnalysisResult } from "@/lib/types/forestry";
+import type {
+  AnalysisResult,
+  SentinelComparisonResult,
+  SentinelComparisonState
+} from "@/lib/types/forestry";
 
 export default function Home() {
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
@@ -18,11 +22,14 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isNationalStatsOpen, setIsNationalStatsOpen] = useState(false);
+  const [sentinelComparison, setSentinelComparison] =
+    useState<SentinelComparisonState>({ status: "idle" });
 
   const selectArea = useCallback(async (areaId: string) => {
     setSelectedAreaId(areaId);
     setIsLoading(true);
     setError(null);
+    setSentinelComparison({ status: "idle" });
 
     try {
       const response = await fetch(`/api/analyze/${encodeURIComponent(areaId)}`);
@@ -47,6 +54,7 @@ export default function Home() {
     async ({ lng, lat }: { lng: number; lat: number }) => {
       setIsLoading(true);
       setError(null);
+      setSentinelComparison({ status: "idle" });
 
       try {
         const response = await fetch(
@@ -81,6 +89,7 @@ export default function Home() {
     async (feature: Feature<Geometry, Record<string, unknown>>) => {
       setIsLoading(true);
       setError(null);
+      setSentinelComparison({ status: "idle" });
 
       try {
         const response = await fetch("/api/analyze-feature", {
@@ -115,6 +124,49 @@ export default function Home() {
     []
   );
 
+  const searchSentinelComparison = useCallback(async () => {
+    if (!analysis) {
+      return;
+    }
+
+    setSentinelComparison({ status: "loading" });
+
+    try {
+      const response = await fetch("/api/sentinel-comparison", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ geometry: analysis.area.geometry })
+      });
+
+      const payload = (await response.json()) as
+        | SentinelComparisonResult
+        | { error?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          "error" in payload && payload.error
+            ? payload.error
+            : "Sentinel võrdluspiltide otsing ebaõnnestus."
+        );
+      }
+
+      setSentinelComparison({
+        status: "loaded",
+        result: payload as SentinelComparisonResult
+      });
+    } catch (cause) {
+      setSentinelComparison({
+        status: "error",
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Sentinel võrdluspiltide otsing ebaõnnestus."
+      });
+    }
+  }, [analysis]);
+
   return (
     <main className="relative h-dvh min-h-[720px] overflow-hidden bg-[var(--sage-50)]">
       <MapView
@@ -144,6 +196,8 @@ export default function Home() {
         analysis={analysis}
         error={error}
         isLoading={isLoading}
+        onSearchSentinelComparison={searchSentinelComparison}
+        sentinelComparison={sentinelComparison}
       />
 
       <NationalStatsButton onClick={() => setIsNationalStatsOpen(true)} />

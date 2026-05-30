@@ -506,6 +506,49 @@ export type NormalizedSelectedAreaEvidence = {
   };
 };
 
+export type SentinelImageStats = {
+  width: number;
+  height: number;
+  sizeBytes: number;
+  grayscaleStddev: number;
+  grayscaleEntropy: number;
+  uniqueSampleValues: number;
+};
+
+export type SentinelComparisonImage = {
+  date: string;
+  score: number;
+  cloudRatio: number;
+  imageUrl: string;
+  stats: SentinelImageStats;
+};
+
+export type SentinelComparisonResult = {
+  generatedAt: string;
+  mapbox: string;
+  sensor: string;
+  filter: string;
+  resample: string;
+  currentMonth: {
+    start: string;
+    end: string;
+    selected: SentinelComparisonImage;
+    candidatesScanned: number;
+  };
+  previousMonth: {
+    start: string;
+    end: string;
+    selected: SentinelComparisonImage;
+    candidatesScanned: number;
+  };
+};
+
+export type SentinelComparisonState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "loaded"; result: SentinelComparisonResult }
+  | { status: "error"; message: string };
+
 export type AreaQuestionAnswer = {
   mode: "template" | "openai" | "ollama";
   status: "generated" | "ready" | "fallback";
