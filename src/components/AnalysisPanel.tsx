@@ -24,6 +24,7 @@ import type {
   NormalizedSourceStatus,
   SentinelComparisonImage,
   SentinelComparisonState,
+  SourceDiagnostic,
   SourceStatus
 } from "@/lib/types/forestry";
 import { downloadCadastreSummary } from "@/lib/export/cadastreSummary";
@@ -252,10 +253,104 @@ function UsedDataRow({
               Ava allikas
             </a>
           ) : null}
+          {source.diagnostics?.length ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {source.diagnostics.slice(-3).map((item) => (
+                <DiagnosticPill diagnostic={item} key={`${item.operation}-${item.startedAt}`} />
+              ))}
+            </div>
+          ) : null}
         </div>
         <StatusPill status={source.status} />
       </div>
     </article>
+  );
+}
+
+function diagnosticStatusLabel(status: SourceDiagnostic["status"]) {
+  switch (status) {
+    case "loaded":
+      return "laetud";
+    case "empty":
+      return "tühi";
+    case "error":
+      return "viga";
+    case "timeout":
+      return "timeout";
+    case "skipped":
+      return "vahele jäetud";
+  }
+}
+
+function DiagnosticPill({ diagnostic }: { diagnostic: SourceDiagnostic }) {
+  const detail = [
+    diagnostic.operation,
+    diagnostic.durationMs !== undefined ? `${diagnostic.durationMs} ms` : null,
+    diagnostic.returnedCount !== undefined ? `${diagnostic.returnedCount} rida` : null,
+    diagnostic.parsedCount !== undefined ? `${diagnostic.parsedCount} loetud` : null,
+    diagnostic.filteredCount !== undefined ? `${diagnostic.filteredCount} kattus` : null,
+    diagnostic.upstreamStatus !== undefined ? `HTTP ${diagnostic.upstreamStatus}` : null
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <span
+      className={clsx(
+        "rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1",
+        diagnostic.status === "loaded"
+          ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
+          : diagnostic.status === "empty"
+            ? "bg-amber-50 text-amber-900 ring-amber-200"
+            : "bg-red-50 text-red-800 ring-red-200"
+      )}
+      title={[detail, diagnostic.message].filter(Boolean).join("\n")}
+    >
+      {diagnostic.operation}: {diagnosticStatusLabel(diagnostic.status)}
+    </span>
+  );
+}
+
+function SourceDiagnosticsList({
+  diagnostics
+}: {
+  diagnostics: SourceDiagnostic[];
+}) {
+  if (!diagnostics.length) {
+    return (
+      <p className="rounded-md bg-white/70 px-2 py-2 text-xs leading-5 text-slate-600 ring-1 ring-slate-200">
+        Selle allika kohta tehnilist päringudiagnostikat ei tekkinud.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {diagnostics.map((item) => (
+        <div
+          className="rounded-md bg-white/75 px-2 py-2 text-xs leading-5 text-slate-700 ring-1 ring-slate-200"
+          key={`${item.operation}-${item.startedAt}`}
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
+            <DiagnosticPill diagnostic={item} />
+            {item.cadastralId ? <span>katastritunnus {item.cadastralId}</span> : null}
+            {item.durationMs !== undefined ? <span>{item.durationMs} ms</span> : null}
+            {item.upstreamStatus !== undefined ? <span>HTTP {item.upstreamStatus}</span> : null}
+          </div>
+          <p className="mt-1 text-slate-600">
+            {[
+              item.requestedCount !== undefined ? `sisend ${item.requestedCount}` : null,
+              item.returnedCount !== undefined ? `tagastas ${item.returnedCount}` : null,
+              item.parsedCount !== undefined ? `loeti ${item.parsedCount}` : null,
+              item.filteredCount !== undefined ? `geomeetriaga kattus ${item.filteredCount}` : null,
+              item.message
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -568,6 +663,7 @@ function TechnicalDetails({ analysis }: { analysis: AnalysisResult }) {
                 registrySummary: analysis.normalizedEvidence.registrySummary,
                 protectionSummary: analysis.normalizedEvidence.protectionSummary,
                 ecosystemContext: analysis.normalizedEvidence.ecosystemContext,
+                diagnostics: analysis.diagnostics,
                 rawFacts: analysis.rawFacts
               },
               null,
@@ -687,6 +783,24 @@ function SourceBasedAnalysis({
             kohta tuleb järeldusi hoida ettevaatlikuna.
           </p>
         ) : null}
+        <details className="group rounded-md bg-white/70 ring-1 ring-lime-100">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2 py-2 text-xs font-semibold text-slate-800">
+            Metsaregistri päringudiagnostika
+            <ChevronDown
+              aria-hidden
+              className="size-3.5 transition group-open:rotate-180"
+            />
+          </summary>
+          <div className="border-t border-lime-100 p-2">
+            <SourceDiagnosticsList
+              diagnostics={
+                analysis.normalizedEvidence.sourceStatus.find(
+                  (source) => source.id === "metsaregister"
+                )?.diagnostics ?? []
+              }
+            />
+          </div>
+        </details>
       </SourceBlock>
 
       <SourceBlock

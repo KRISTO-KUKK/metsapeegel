@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bbox, pointOnFeature } from "@turf/turf";
-import { LocateFixed, RotateCcw } from "lucide-react";
+import { LoaderCircle, LocateFixed, RotateCcw } from "lucide-react";
 import maplibregl, { GeoJSONSource } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import countiesGeojson from "@/data/official/counties.geojson";
@@ -60,6 +60,8 @@ const estoniaBounds: [[number, number], [number, number]] = [
   [21.55, 57.2],
   [28.45, 59.78]
 ];
+
+const forestPolygonMinZoom = 7.7;
 
 const defaultLayerVisibility: LayerVisibility = {
   cadastre: false,
@@ -190,6 +192,14 @@ function setForestPreviewVisibility(map: maplibregl.Map, isVisible: boolean) {
   );
 }
 
+function setForestPolygonVisibility(map: maplibregl.Map, isVisible: boolean) {
+  setLayerVisibility(
+    map,
+    ["etak-forest-preview-fill", "etak-forest-preview-line"],
+    isVisible
+  );
+}
+
 function escapeHtml(value: unknown) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -241,6 +251,10 @@ export function MapView({
   const [queryOverlay, setQueryOverlay] = useState<QueryOverlayState | null>(
     null
   );
+  const [showForestZoomHint, setShowForestZoomHint] = useState(true);
+  const [isForestPreviewLoading, setIsForestPreviewLoading] = useState(false);
+  const [hasForestPreviewFeatures, setHasForestPreviewFeatures] =
+    useState(false);
   const visibleForestCacheRef = useRef<
     Map<string, Feature<Geometry, Record<string, unknown>>>
   >(new Map());
@@ -314,6 +328,12 @@ export function MapView({
     mapRef.current = map;
     map.getCanvas().style.cursor = "grab";
 
+    const resizeMap = () => map.resize();
+    const resizeObserver = new ResizeObserver(resizeMap);
+    resizeObserver.observe(containerRef.current);
+    window.addEventListener("resize", resizeMap);
+    window.requestAnimationFrame(resizeMap);
+
     let visibleForestAbort: AbortController | null = null;
     let visibleForestTimer: number | null = null;
 
@@ -354,6 +374,22 @@ export function MapView({
 
         const zoom = map.getZoom();
         visibleForestAbort?.abort();
+        setShowForestZoomHint(zoom < forestPolygonMinZoom);
+
+        if (zoom < forestPolygonMinZoom) {
+          visibleForestAbort = null;
+          visibleForestCacheRef.current.clear();
+          visibleForestOrderRef.current = [];
+          setIsForestPreviewLoading(false);
+          setHasForestPreviewFeatures(false);
+          setForestPolygonVisibility(map, false);
+          setGeojsonSource(map, "etak-forest-preview", emptyCollection);
+          return;
+        }
+
+        setForestPolygonVisibility(map, true);
+        setHasForestPreviewFeatures(visibleForestCacheRef.current.size > 0);
+        setIsForestPreviewLoading(visibleForestCacheRef.current.size === 0);
         visibleForestAbort = new AbortController();
 
         const bounds = map.getBounds();
@@ -366,8 +402,8 @@ export function MapView({
           .map((coordinate) => coordinate.toFixed(6))
           .join(",");
 
-        const count = zoom < 7.2 ? 3200 : zoom < 8.8 ? 2400 : 1100;
-        const maxCachedFeatures = zoom < 7.2 ? 4200 : zoom < 8.8 ? 5200 : 6200;
+        const count = zoom < 8.4 ? 1000 : 1700;
+        const maxCachedFeatures = zoom < 8.4 ? 1600 : 2600;
 
         try {
           const response = await fetch(
@@ -379,15 +415,19 @@ export function MapView({
           }
 
           const data = (await response.json()) as GeoCollection;
+          const mergedData = mergeVisibleForestData(data, maxCachedFeatures);
           setGeojsonSource(
             map,
             "etak-forest-preview",
-            mergeVisibleForestData(data, maxCachedFeatures)
+            mergedData
           );
+          setHasForestPreviewFeatures(mergedData.features.length > 0);
+          setIsForestPreviewLoading(false);
         } catch (cause) {
           if (cause instanceof DOMException && cause.name === "AbortError") {
             return;
           }
+          setIsForestPreviewLoading(false);
         }
       }, 280);
     }
@@ -485,7 +525,7 @@ export function MapView({
         id: "maaamet-forest-detail",
         type: "raster",
         source: "maaamet-forest-detail",
-        minzoom: 8.2,
+        minzoom: forestPolygonMinZoom,
         paint: {
           "raster-opacity": 0.22,
           "raster-saturation": -0.35,
@@ -531,6 +571,7 @@ export function MapView({
         id: "etak-forest-preview-fill",
         type: "fill",
         source: "etak-forest-preview",
+        minzoom: forestPolygonMinZoom,
         paint: {
           "fill-color": "#1f7a3a",
           "fill-opacity": [
@@ -551,6 +592,7 @@ export function MapView({
         id: "etak-forest-preview-line",
         type: "line",
         source: "etak-forest-preview",
+        minzoom: forestPolygonMinZoom,
         paint: {
           "line-color": "#0b3d22",
           "line-width": [
@@ -848,6 +890,8 @@ export function MapView({
         window.clearTimeout(visibleForestTimer);
       }
       visibleForestAbort?.abort();
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", resizeMap);
       tooltip.remove();
       map.remove();
       mapRef.current = null;
@@ -1080,8 +1124,22 @@ export function MapView({
 
   return (
     <>
-      <div className="absolute inset-0" ref={containerRef} />
+      <div className="absolute inset-0 h-full w-full" ref={containerRef} />
       <div className="fixed bottom-3 left-3 z-10 flex max-w-[calc(100vw-1.5rem)] flex-col gap-2 sm:bottom-5 sm:left-[450px]">
+        {!queryOverlay && showForestZoomHint ? (
+          <div className="glass-panel max-w-sm rounded-lg px-3 py-2 text-xs font-medium leading-5 text-slate-700 shadow-panel">
+            Suumi veidi sisse, et ETAK metsaalad kaardile ilmuksid ja neid
+            valida saaks.
+          </div>
+        ) : null}
+
+        {!queryOverlay && isForestPreviewLoading && !hasForestPreviewFeatures ? (
+          <div className="glass-panel inline-flex max-w-xs items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-700 shadow-panel">
+            <LoaderCircle aria-hidden className="size-4 animate-spin text-emerald-700" />
+            Laen ETAK metsaalasid...
+          </div>
+        ) : null}
+
         {queryOverlay ? (
           <div className="glass-panel max-w-sm rounded-lg p-3 shadow-panel">
             <div className="flex items-start justify-between gap-3">

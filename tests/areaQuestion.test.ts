@@ -231,6 +231,7 @@ function analysisWith({
     ],
     derivedFindings: [],
     missingEvidence: [],
+    diagnostics: [],
     sources: [
       {
         id: "maaamet-etak-forest",
@@ -621,6 +622,7 @@ function analysisWith({
     ],
     evidencePackage,
     normalizedEvidence,
+    diagnostics: [],
     rawFacts: {
       stands: Array.from({ length: stands }, (_, index) => ({ id: `stand-${index}` })),
       notices: Array.from({ length: notices }, (_, index) => ({ id: `notice-${index}` })),

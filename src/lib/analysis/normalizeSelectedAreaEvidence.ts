@@ -326,19 +326,51 @@ function buildEcosystemContext(
 function buildSourceStatus(
   pkg: ForestAreaEvidencePackage
 ): NormalizedSourceStatus[] {
-  return pkg.sources.map((source) => ({
-    id: source.id,
-    name: source.name,
-    provider: source.provider,
-    url: source.url,
-    status: source.status,
-    targetId: `source-${source.id}`,
-    summary:
-      source.warning ??
-      (source.status === "loaded"
-        ? "Allikas on selle ala andmepakis kasutusel."
-        : `Allika staatus: ${sourceStatusLabel(source.status)}.`)
-  }));
+  return pkg.sources.map((source) => {
+    const diagnostics = pkg.diagnostics.filter(
+      (item) => item.sourceId === source.id
+    );
+    const hasError = diagnostics.some(
+      (item) => item.status === "error" || item.status === "timeout"
+    );
+    const hasLoaded = diagnostics.some((item) => item.status === "loaded");
+    const allEmpty =
+      diagnostics.length > 0 &&
+      diagnostics.every((item) => item.status === "empty" || item.status === "loaded");
+    const status = hasError
+      ? "error"
+      : source.status === "missing" && hasLoaded
+        ? "loaded"
+        : source.status;
+    const latest = diagnostics.at(-1);
+    const diagnosticSummary = diagnostics.length
+      ? [
+          `${diagnostics.length} kontrolli`,
+          latest?.durationMs !== undefined ? `viimane ${latest.durationMs} ms` : null,
+          allEmpty && !hasLoaded ? "vastus oli tühi" : null
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : undefined;
+
+    return {
+      id: source.id,
+      name: source.name,
+      provider: source.provider,
+      url: source.url,
+      status,
+      diagnostics,
+      targetId: `source-${source.id}`,
+      summary:
+        hasError
+          ? `Allika päringul oli viga või timeout. ${diagnosticSummary ?? ""}`.trim()
+          : source.warning ??
+            diagnosticSummary ??
+            (status === "loaded"
+              ? "Allikas on selle ala andmepakis kasutusel."
+              : `Allika staatus: ${sourceStatusLabel(status)}.`)
+    };
+  });
 }
 
 function dataCompleteness(

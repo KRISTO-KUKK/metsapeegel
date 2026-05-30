@@ -22,6 +22,17 @@ export type VisibleForestProperties = {
   etakType?: string;
   areaHa?: number;
 };
+export type VisibleForestCollection = FeatureCollection<
+  Geometry,
+  VisibleForestProperties
+> & {
+  metadata?: {
+    cellCount: number;
+    cellRequestCount: number;
+    rawFeatureCount: number;
+    uniqueFeatureCount: number;
+  };
+};
 
 type CadastreContext = {
   cadastralId?: string;
@@ -397,7 +408,7 @@ export async function findLiveForestsInBbox(
   east: number,
   north: number,
   count = 450
-): Promise<FeatureCollection<Geometry, VisibleForestProperties>> {
+): Promise<VisibleForestCollection> {
   const cells = splitBbox(west, south, east, north);
   const cellCount = Math.max(90, Math.min(520, Math.ceil((count / cells.length) * 1.35)));
   const collections = await Promise.allSettled(
@@ -433,6 +444,12 @@ export async function findLiveForestsInBbox(
 
   return {
     type: "FeatureCollection",
-    features: Array.from(uniqueFeatures.values()).slice(0, count)
+    features: Array.from(uniqueFeatures.values()).slice(0, count),
+    metadata: {
+      cellCount: cells.length,
+      cellRequestCount: cellCount,
+      rawFeatureCount: features.length,
+      uniqueFeatureCount: uniqueFeatures.size
+    }
   };
 }

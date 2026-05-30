@@ -168,7 +168,7 @@ export default function Home() {
   }, [analysis]);
 
   return (
-    <main className="relative h-dvh min-h-[720px] overflow-hidden bg-[var(--sage-50)]">
+    <main className="fixed inset-0 overflow-hidden bg-[var(--sage-50)]">
       <MapView
         analysis={analysis}
         onSelectForestFeature={selectForestFeature}

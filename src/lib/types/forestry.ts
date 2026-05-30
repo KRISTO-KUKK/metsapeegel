@@ -148,6 +148,32 @@ export type EvidenceSource = {
   warning?: string;
 };
 
+export type SourceDiagnosticStatus =
+  | "loaded"
+  | "empty"
+  | "error"
+  | "timeout"
+  | "skipped";
+
+export type SourceDiagnostic = {
+  sourceId: string;
+  sourceName: string;
+  operation: string;
+  status: SourceDiagnosticStatus;
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  url?: string;
+  upstreamStatus?: number;
+  cadastralId?: string;
+  requestedCount?: number;
+  returnedCount?: number;
+  parsedCount?: number;
+  filteredCount?: number;
+  cache?: "hit" | "miss" | "inflight";
+  message?: string;
+};
+
 export type StructuredEvidenceItem = {
   id: string;
   sourceId: string;
@@ -310,6 +336,7 @@ export type ForestAreaEvidencePackage = {
   derivedFindings: DerivedFinding[];
   missingEvidence: MissingEvidence[];
   sources: EvidenceSource[];
+  diagnostics: SourceDiagnostic[];
 };
 
 export type PublicRiskLevel = "low" | "medium" | "high";
@@ -438,6 +465,7 @@ export type NormalizedSourceStatus = {
   url?: string;
   status: SourceStatus;
   summary: string;
+  diagnostics?: SourceDiagnostic[];
   targetId?: string;
 };
 
@@ -587,6 +615,7 @@ export type AnalysisResult = {
   sources: DataSourceRef[];
   evidencePackage: ForestAreaEvidencePackage;
   normalizedEvidence: NormalizedSelectedAreaEvidence;
+  diagnostics: SourceDiagnostic[];
   rawFacts: Record<string, unknown>;
 };
 

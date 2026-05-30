@@ -4,7 +4,6 @@ import {
   booleanIntersects,
   intersect
 } from "@turf/turf";
-import proj4 from "proj4";
 import type {
   Feature,
   FeatureCollection,
@@ -13,6 +12,7 @@ import type {
   Polygon
 } from "geojson";
 import type { DataProvider, SatelliteSignal } from "@/lib/data/DataProvider";
+import { traceSource } from "@/lib/data/sourceDiagnostics";
 import { getGeometryCenter } from "@/lib/geo/centroid";
 import { geometriesOverlap } from "@/lib/geo/overlap";
 import type {
@@ -46,7 +46,8 @@ type ElmeLayerConfig = {
   dataYear: number;
 };
 
-const metsaregisterBaseUrl = "https://register.metsad.ee/portaal/api/rest";
+const metsaregisterWfsUrl =
+  "https://gsavalik.envir.ee/geoserver/metsaregister/wfs";
 const cadastreWfsUrl = "https://gsavalik.envir.ee/geoserver/kataster/wfs";
 const eelisWfsUrl = "https://gsavalik.envir.ee/geoserver/eelis/ows";
 const elmeWfsUrl = "https://elmegs.envir.ee/geoserver/elme/ows";
@@ -128,23 +129,17 @@ const elmeLayers: ElmeLayerConfig[] = [
   }
 ];
 
-proj4.defs(
-  "EPSG:3301",
-  "+proj=lcc +lat_1=59.33333333333334 +lat_2=58 +lat_0=57.51755393055556 +lon_0=24 +x_0=500000 +y_0=6375000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +axis=neu +no_defs"
-);
-
-let classifierPromise: Promise<ClassifierMap> | null = null;
 const responseCache = new Map<string, { expiresAt: number; value: unknown }>();
 const inflightRequests = new Map<string, Promise<unknown>>();
 
-function objectValue(value: unknown): JsonObject | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as JsonObject)
-    : null;
-}
-
-function arrayValue(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
+class UpstreamRequestError extends Error {
+  constructor(
+    message: string,
+    readonly upstreamStatus?: number
+  ) {
+    super(message);
+    this.name = "UpstreamRequestError";
+  }
 }
 
 function stringValue(value: unknown): string | undefined {
@@ -179,13 +174,12 @@ function overlapPercentOfArea(overlapHa: number | undefined, areaHa?: number) {
   return Math.round((overlapHa / areaHa) * 1000) / 10;
 }
 
-function yearFromEpoch(value: unknown): number | undefined {
-  const epoch = numberValue(value);
-  if (!epoch) {
+function yearFromDateLike(value: unknown): number | undefined {
+  if (typeof value !== "string" || !value.trim()) {
     return undefined;
   }
 
-  const year = new Date(epoch).getFullYear();
+  const year = new Date(value).getFullYear();
   return Number.isFinite(year) ? year : undefined;
 }
 
@@ -218,7 +212,10 @@ async function fetchJson<T>(url: URL): Promise<T> {
     });
 
     if (!response.ok) {
-      throw new Error(`Request failed with ${response.status}`);
+      throw new UpstreamRequestError(
+        `Request failed with ${response.status}`,
+        response.status
+      );
     }
 
     const payload = (await response.json()) as T;
@@ -350,35 +347,6 @@ function areaFromCadastreFeature(feature: WfsFeature): Area | null {
   };
 }
 
-async function getClassifiers(): Promise<ClassifierMap> {
-  if (!classifierPromise) {
-    classifierPromise = (async () => {
-      const url = new URL(`${metsaregisterBaseUrl}/baas/`);
-      const payload = await fetchJson<unknown>(url);
-      const classifiers = new Map<string, Map<string, string>>();
-
-      for (const row of arrayValue(payload)) {
-        const object = objectValue(row);
-        const kind = stringValue(object?.liik);
-        const code = codeValue(object?.kood);
-        const label = stringValue(object?.nimetus);
-
-        if (!kind || !code || !label) {
-          continue;
-        }
-
-        const byCode = classifiers.get(kind) ?? new Map<string, string>();
-        byCode.set(code, label);
-        classifiers.set(kind, byCode);
-      }
-
-      return classifiers;
-    })();
-  }
-
-  return classifierPromise;
-}
-
 function classifierLabel(
   classifiers: ClassifierMap,
   kind: string,
@@ -392,154 +360,90 @@ function classifierLabel(
   return classifiers.get(kind)?.get(normalizedCode) ?? normalizedCode;
 }
 
-async function fetchMetsaregister(path: string, cadastralId: string): Promise<unknown> {
-  const url = new URL(`${metsaregisterBaseUrl}/${path}`);
-  url.searchParams.set("katastriNr", cadastralId);
-  return fetchJson<unknown>(url);
+function fetchMetsaregisterStandsWfs(
+  cadastralId: string
+): Promise<WfsCollection> {
+  return fetchWfs({
+    baseUrl: metsaregisterWfsUrl,
+    typeNames: "metsaregister:eraldis",
+    cqlFilter: `katastri_nr='${cqlLiteral(cadastralId)}'`,
+    count: 500
+  });
 }
 
-function transformCoordinates(value: unknown): unknown {
-  if (
-    Array.isArray(value) &&
-    value.length >= 2 &&
-    typeof value[0] === "number" &&
-    typeof value[1] === "number"
-  ) {
-    const [lng, lat] = proj4("EPSG:3301", "EPSG:4326", [
-      value[0],
-      value[1]
-    ]);
-
-    return [
-      Number(lng.toFixed(8)),
-      Number(lat.toFixed(8)),
-      ...value.slice(2)
-    ];
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(transformCoordinates);
-  }
-
-  return value;
+function metsaregisterWfsLayerUrl(typeNames: string) {
+  const url = new URL(metsaregisterWfsUrl);
+  url.searchParams.set("SERVICE", "WFS");
+  url.searchParams.set("REQUEST", "GetFeature");
+  url.searchParams.set("TYPENAMES", typeNames);
+  url.searchParams.set("OUTPUTFORMAT", "application/json");
+  return url.toString();
 }
 
-function transformEpsg3301Geometry(geometry: Geometry): Geometry {
-  if (geometry.type === "GeometryCollection") {
-    return {
-      type: "GeometryCollection",
-      geometries: geometry.geometries.map(transformEpsg3301Geometry)
-    };
-  }
-
-  return {
-    type: geometry.type,
-    coordinates: transformCoordinates(
-      (geometry as Geometry & { coordinates: unknown }).coordinates
-    )
-  } as Geometry;
+function fetchMetsaregisterNoticesWfs(
+  cadastralId: string,
+  typeNames: "metsaregister:teatis" | "metsaregister:teatis_arhiiv"
+): Promise<WfsCollection> {
+  return fetchWfs({
+    baseUrl: metsaregisterWfsUrl,
+    typeNames,
+    cqlFilter: `katastri_nr='${cqlLiteral(cadastralId)}'`,
+    count: 500
+  });
 }
 
-function parseMetsaregisterGeometry(value: unknown): Geometry | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(value) as Geometry;
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      !("type" in parsed) ||
-      !("coordinates" in parsed)
-    ) {
-      return null;
-    }
-
-    return transformEpsg3301Geometry(parsed);
-  } catch {
-    return null;
-  }
-}
-
-function flattenStandRows(payload: unknown): JsonObject[] {
-  const rows: JsonObject[] = [];
-
-  for (const estate of arrayValue(payload)) {
-    for (const unit of arrayValue(objectValue(estate)?.alamYksused)) {
-      for (const stand of arrayValue(objectValue(unit)?.eraldised)) {
-        const object = objectValue(stand);
-        if (object) {
-          rows.push(object);
-        }
-      }
-    }
-  }
-
-  return rows;
-}
-
-function flattenNoticeRows(payload: unknown): JsonObject[] {
-  const rows: JsonObject[] = [];
-
-  for (const group of arrayValue(payload)) {
-    for (const unit of arrayValue(objectValue(group)?.alamYksused)) {
-      for (const notice of arrayValue(objectValue(unit)?.teatised)) {
-        const object = objectValue(notice);
-        if (object) {
-          rows.push({
-            ...object,
-            katastriNr: objectValue(unit)?.katastriNr,
-            kvartaliNr: objectValue(unit)?.kvartaliNr
-          });
-        }
-      }
-    }
-  }
-
-  return rows;
-}
-
-function standFromMetsaregister(
-  row: JsonObject,
+function standFromMetsaregisterWfsFeature(
+  feature: WfsFeature,
   classifiers: ClassifierMap,
   areaId: string
 ): ForestStand | null {
-  const geometry = parseMetsaregisterGeometry(row.alaGeoJson);
-  if (!geometry) {
+  if (!feature.geometry) {
     return null;
   }
 
-  const standNumber = numberValue(row.eraldiseNr) ?? stringValue(row.eraldiseNr);
-  const cadastralId = stringValue(row.katastriNr) ?? areaId;
+  const properties = feature.properties;
+  const standNumber =
+    numberValue(properties.eraldise_nr) ?? stringValue(properties.eraldise_nr);
+  const cadastralId = stringValue(properties.katastri_nr) ?? areaId;
   const id =
-    numberValue(row.id) !== undefined
-      ? `metsaregister-stand-${numberValue(row.id)}`
+    numberValue(properties.id) !== undefined
+      ? `metsaregister-stand-${numberValue(properties.id)}`
       : `metsaregister-stand-${cadastralId}-${standNumber ?? "unknown"}`;
 
   return {
     id,
     areaId,
     standNumber,
-    mainSpecies: classifierLabel(classifiers, "PUULIIK", row.peapuuliik),
+    mainSpecies: classifierLabel(
+      classifiers,
+      "PUULIIK",
+      properties.peapuuliik_kood
+    ),
     developmentClass: classifierLabel(
       classifiers,
       "ARENGUKLASS",
-      row.arenguklKood
+      properties.arengukl_kood
     ),
-    siteType: classifierLabel(classifiers, "KASVUKOHT", row.kasvukohaKood),
-    inventoryYear: yearFromEpoch(row.inventKp),
-    averageAge: numberValue(row.keskmVanus),
-    averageHarvestAge: numberValue(row.keskmRaievanus),
-    heightM: numberValue(row.korgus),
-    bonitetClass: codeValue(row.boniteediKood),
-    registryStage: classifierLabel(classifiers, "ETAPP", row.etapp),
-    areaHa: numberValue(row.pindala) ?? roundHa(turfArea({
-      type: "Feature",
-      properties: {},
-      geometry
-    })),
-    geometry
+    siteType: classifierLabel(
+      classifiers,
+      "KASVUKOHT",
+      properties.kasvukoht_kood
+    ),
+    inventoryYear: yearFromDateLike(properties.invent_kp),
+    averageAge: numberValue(properties.keskm_vanus),
+    averageHarvestAge: numberValue(properties.keskm_raievanus),
+    heightM: numberValue(properties.korgus),
+    bonitetClass: codeValue(properties.boniteedi_kood),
+    areaHa:
+      numberValue(properties.pindala) ??
+      roundHa(
+        turfArea({
+          type: "Feature",
+          properties: {},
+          geometry: feature.geometry
+        })
+      ),
+    geometry: feature.geometry
   };
 }
 
@@ -558,59 +462,35 @@ function noticeTypeFromCode(code: unknown): ForestNotice["type"] {
   }
 }
 
-function noticeStatusFromCode(
-  code: unknown,
-  statusLabel?: string
-): ForestNotice["status"] {
-  const normalizedCode = codeValue(code);
-  const lowerLabel = statusLabel?.toLocaleLowerCase("et") ?? "";
-
-  if (
-    normalizedCode === "14" ||
-    normalizedCode === "10" ||
-    lowerLabel.includes("arhiiv") ||
-    lowerLabel.includes("kehtetu")
-  ) {
-    return "archived";
-  }
-
-  if (
-    normalizedCode === "6" ||
-    normalizedCode === "7" ||
-    lowerLabel.includes("registreeritud") ||
-    lowerLabel.includes("menetluses") ||
-    lowerLabel.includes("kehtiv")
-  ) {
-    return "active";
-  }
-
-  return "unknown";
-}
-
-function noticeFromMetsaregister(
-  row: JsonObject,
+function noticeFromMetsaregisterWfsFeature(
+  feature: WfsFeature,
   classifiers: ClassifierMap,
-  areaId: string
+  areaId: string,
+  status: ForestNotice["status"]
 ): ForestNotice {
-  const id =
-    numberValue(row.teatisId) !== undefined
-      ? `metsaregister-notice-${numberValue(row.teatisId)}`
-      : `metsaregister-notice-${stringValue(row.teatiseNr) ?? crypto.randomUUID()}`;
+  const properties = feature.properties;
+  const registryNumber = stringValue(properties.teatise_nr);
   const workTypeLabel =
-    classifierLabel(classifiers, "TOOLIIK_TEATIS", row.tooKood) ??
-    classifierLabel(classifiers, "TOOLIIK", row.tooKood);
-  const statusLabel = classifierLabel(classifiers, "OLEK_TEATIS", row.olek);
+    classifierLabel(classifiers, "TOOLIIK_TEATIS", properties.too_kood) ??
+    classifierLabel(classifiers, "TOOLIIK", properties.too_kood);
+  const statusLabel = stringValue(properties.otsus);
 
   return {
-    id,
+    id:
+      registryNumber ??
+      `metsaregister-notice-${stringValue(feature.id) ?? crypto.randomUUID()}`,
     areaId,
-    type: noticeTypeFromCode(row.tooKood),
-    status: noticeStatusFromCode(row.olek, statusLabel),
-    registryNumber: stringValue(row.teatiseNr),
+    type: noticeTypeFromCode(properties.too_kood),
+    status,
+    registryNumber,
     workTypeLabel,
     statusLabel,
-    standNumber: numberValue(row.eraldiseNr) ?? stringValue(row.eraldiseNr),
-    validUntilYear: yearFromEpoch(row.menetlemiseTahtaeg)
+    standNumber:
+      numberValue(properties.eraldise_nr) ??
+      stringValue(properties.eraldise_nr),
+    validUntilYear: yearFromDateLike(properties.kehtiv_kuni),
+    areaHa: numberValue(properties.pindala),
+    geometry: feature.geometry ?? undefined
   };
 }
 
@@ -959,19 +839,52 @@ export class RealDataProvider implements DataProvider {
       return [];
     }
 
+    const classifiers = new Map<string, Map<string, string>>();
+    const resolvedAreaId = area?.id ?? areaId ?? cadastralId;
+
     try {
-      const [payload, classifiers] = await Promise.all([
-        fetchMetsaregister("eraldis/puu", cadastralId),
-        getClassifiers().catch(() => new Map<string, Map<string, string>>())
-      ]);
-      const stands = flattenStandRows(payload)
-        .map((row) =>
-          standFromMetsaregister(row, classifiers, area?.id ?? areaId ?? cadastralId)
+      const collection = await traceSource({
+        sourceId: "metsaregister",
+        sourceName: "Metsaregister",
+        operation: "eraldis-wfs",
+        url: metsaregisterWfsLayerUrl("metsaregister:eraldis"),
+        cadastralId,
+        run: () => fetchMetsaregisterStandsWfs(cadastralId),
+        summarize: (value) => ({
+          status: value.features.length > 0 ? "loaded" : "empty",
+          returnedCount: value.features.length
+        })
+      });
+      const stands = collection.features
+        .map((feature) =>
+          standFromMetsaregisterWfsFeature(
+            feature,
+            classifiers,
+            resolvedAreaId
+          )
         )
         .filter((stand): stand is ForestStand => Boolean(stand));
       const overlappingStands = stands.filter((stand) =>
         geometriesOverlap(areaGeometry, stand.geometry)
       );
+      await traceSource({
+        sourceId: "metsaregister",
+        sourceName: "Metsaregister",
+        operation: "eraldis-wfs-parse",
+        cadastralId,
+        run: async () => overlappingStands.length > 0 ? overlappingStands : stands,
+        summarize: (value) => ({
+          status: value.length > 0 ? "loaded" : "empty",
+          requestedCount: collection.features.length,
+          parsedCount: stands.length,
+          filteredCount: overlappingStands.length,
+          returnedCount: value.length,
+          message:
+            collection.features.length > stands.length
+              ? `${collection.features.length - stands.length} WFS stand rows had no usable geometry.`
+              : undefined
+        })
+      }).catch(() => undefined);
 
       return overlappingStands.length > 0 ? overlappingStands : stands;
     } catch {
@@ -980,7 +893,7 @@ export class RealDataProvider implements DataProvider {
   }
 
   async getForestNotices(
-    _areaGeometry: Geometry,
+    areaGeometry: Geometry,
     areaId?: string,
     area?: Area
   ): Promise<ForestNotice[]> {
@@ -989,15 +902,82 @@ export class RealDataProvider implements DataProvider {
       return [];
     }
 
+    const classifiers = new Map<string, Map<string, string>>();
+    const resolvedAreaId = area?.id ?? areaId ?? cadastralId;
+
     try {
-      const [payload, classifiers] = await Promise.all([
-        fetchMetsaregister("teatis/puu", cadastralId),
-        getClassifiers().catch(() => new Map<string, Map<string, string>>())
+      const [activeCollection, archivedCollection] = await Promise.all([
+        traceSource({
+          sourceId: "metsaregister",
+          sourceName: "Metsaregister",
+          operation: "teatis-wfs",
+          url: metsaregisterWfsLayerUrl("metsaregister:teatis"),
+          cadastralId,
+          run: () =>
+            fetchMetsaregisterNoticesWfs(cadastralId, "metsaregister:teatis"),
+          summarize: (value) => ({
+            status: value.features.length > 0 ? "loaded" : "empty",
+            returnedCount: value.features.length
+          })
+        }),
+        traceSource({
+          sourceId: "metsaregister",
+          sourceName: "Metsaregister",
+          operation: "teatis-arhiiv-wfs",
+          url: metsaregisterWfsLayerUrl("metsaregister:teatis_arhiiv"),
+          cadastralId,
+          run: () =>
+            fetchMetsaregisterNoticesWfs(
+              cadastralId,
+              "metsaregister:teatis_arhiiv"
+            ),
+          summarize: (value) => ({
+            status: value.features.length > 0 ? "loaded" : "empty",
+            returnedCount: value.features.length
+          })
+        })
       ]);
 
-      return flattenNoticeRows(payload).map((row) =>
-        noticeFromMetsaregister(row, classifiers, area?.id ?? areaId ?? cadastralId)
+      const notices = [
+        ...activeCollection.features.map((feature) =>
+          noticeFromMetsaregisterWfsFeature(
+            feature,
+            classifiers,
+            resolvedAreaId,
+            "active"
+          )
+        ),
+        ...archivedCollection.features.map((feature) =>
+          noticeFromMetsaregisterWfsFeature(
+            feature,
+            classifiers,
+            resolvedAreaId,
+            "archived"
+          )
+        )
+      ];
+      const overlappingNotices = notices.filter(
+        (notice) =>
+          !notice.geometry || geometriesOverlap(areaGeometry, notice.geometry)
       );
+      await traceSource({
+        sourceId: "metsaregister",
+        sourceName: "Metsaregister",
+        operation: "teatis-wfs-parse",
+        cadastralId,
+        run: async () =>
+          overlappingNotices.length > 0 ? overlappingNotices : notices,
+        summarize: (value) => ({
+          status: value.length > 0 ? "loaded" : "empty",
+          requestedCount:
+            activeCollection.features.length + archivedCollection.features.length,
+          parsedCount: notices.length,
+          filteredCount: overlappingNotices.length,
+          returnedCount: value.length
+        })
+      }).catch(() => undefined);
+
+      return overlappingNotices.length > 0 ? overlappingNotices : notices;
     } catch {
       return [];
     }

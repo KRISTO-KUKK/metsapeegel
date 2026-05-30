@@ -36,13 +36,13 @@ export const queryableDatasets: QueryableDataset[] = [
     ]
   },
   {
-    id: "metsaregister-rest",
+    id: "metsaregister-wfs",
     name: "Metsaregister",
     provider: "Kliimaministeerium / Metsaregister",
-    accessMethod: "rest",
+    accessMethod: "wfs",
     status: "loaded",
     scope: "selected_area",
-    url: "https://register.metsad.ee/portaal/api/rest",
+    url: "https://gsavalik.envir.ee/geoserver/metsaregister/wfs",
     provides: [
       "eraldised",
       "inventuuriaasta",
@@ -52,7 +52,7 @@ export const queryableDatasets: QueryableDataset[] = [
     ],
     filterFields: ["katastriNr", "inventoryYear", "noticeStatus"],
     limitations: [
-      "Metsaregistri paring tootab praegu usaldusvaarselt katastritunnuse kaudu.",
+      "Metsaregistri WFS-paring tootab katastritunnuse kaudu.",
       "Metsateatis ei toenda uksinda, et too toimus."
     ]
   },
@@ -105,7 +105,7 @@ export const queryableDatasets: QueryableDataset[] = [
     id: "kaia",
     name: "KAIA avaandmete API",
     provider: "Keskkonnaportaal",
-    accessMethod: "rest",
+    accessMethod: "wfs",
     status: "not_connected",
     scope: "national_context",
     url: "https://avaandmed.keskkonnaportaal.ee/swagger/v1/swagger.json",
@@ -153,7 +153,7 @@ export const areaQueryFilters: AreaQueryFilterDefinition[] = [
     label: "Inventuuriaasta jargi alad",
     description:
       "Leiab praeguses kaardivaates metsaalad, mille seotud Metsaregistri eraldistel on maaratud inventuuriaasta.",
-    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-rest"],
+    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-wfs"],
     parameters: [
       {
         id: "year",
@@ -170,7 +170,7 @@ export const areaQueryFilters: AreaQueryFilterDefinition[] = [
     label: "Vanema inventuuriga alad",
     description:
       "Leiab praeguses kaardivaates metsaalad, mille seotud Metsaregistri eraldiste inventuuriaasta on enne etteantud aastat.",
-    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-rest"],
+    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-wfs"],
     parameters: [
       {
         id: "beforeYear",
@@ -204,7 +204,7 @@ export const areaQueryFilters: AreaQueryFilterDefinition[] = [
     label: "Metsateatisega alad",
     description:
       "Leiab praeguses kaardivaates metsaalad, mille kohta Metsaregistri avalik paring tagastab metsateatise.",
-    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-rest"],
+    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-wfs"],
     parameters: [],
     caveat:
       "Metsateatis tahendab registrifakti kavandatud voi menetletud tegevuse kohta; see ei toenda uksinda, et too toimus."
@@ -214,7 +214,7 @@ export const areaQueryFilters: AreaQueryFilterDefinition[] = [
     label: "Metsateatiseta alad",
     description:
       "Leiab praeguses kaardivaates metsaalad, mille kohta Metsaregistri avalik paring ei tagasta metsateatist.",
-    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-rest"],
+    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-wfs"],
     parameters: [],
     caveat:
       "Teatise puudumine selles paringus ei toesta, et uhtegi menetlust pole kunagi olnud."
@@ -244,7 +244,7 @@ export const areaQueryFilters: AreaQueryFilterDefinition[] = [
     label: "Metsaregistri eraldisteta alad",
     description:
       "Leiab praeguses kaardivaates metsaalad, mille seotud katastri kohta Metsaregister ei tagasta eraldisi.",
-    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-rest"],
+    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-wfs"],
     parameters: [],
     caveat:
       "Eraldiste puudumine voib tahendada andmepiiri voi sidumise probleemi, mitte automaatselt seda, et ala pole mets."
@@ -288,7 +288,7 @@ export const areaQueryFilters: AreaQueryFilterDefinition[] = [
     label: "Paljude eraldistega alad",
     description:
       "Leiab praeguses kaardivaates metsaalad, mille seotud Metsaregistri eraldiste arv on suurem voi vordne kasutaja antud arvuga.",
-    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-rest"],
+    requiredDatasets: ["etak-forest-wfs", "cadastre-wfs", "metsaregister-wfs"],
     parameters: [
       {
         id: "minStands",

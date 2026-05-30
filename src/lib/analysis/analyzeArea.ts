@@ -19,6 +19,11 @@ import {
 import { buildPublicAudit } from "@/lib/analysis/publicAudit";
 import { generateAiNarrative } from "@/lib/ai/narrative";
 import { normalizeSelectedAreaEvidence } from "@/lib/analysis/normalizeSelectedAreaEvidence";
+import {
+  currentSourceDiagnostics,
+  recordSourceDiagnostic,
+  withSourceDiagnostics
+} from "@/lib/data/sourceDiagnostics";
 import type {
   Area,
   AnalysisResult,
@@ -35,6 +40,7 @@ import type {
   PriorityBlock,
   PrioritizedInsight,
   ProtectedArea,
+  SourceDiagnostic,
   SpatialOverlap,
   TimelineEvent
 } from "@/lib/types/forestry";
@@ -212,19 +218,33 @@ async function withAnalysisTimeout<T>({
   promise,
   fallback,
   timeoutMs,
-  timedOutSources
+  timedOutSources,
+  sourceId,
+  sourceName
 }: {
   label: string;
   promise: Promise<T>;
   fallback: T;
   timeoutMs: number;
   timedOutSources: string[];
+  sourceId?: string;
+  sourceName?: string;
 }): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const guardedPromise = promise.catch(() => fallback);
   const timeoutPromise = new Promise<T>((resolve) => {
     timeout = setTimeout(() => {
       timedOutSources.push(label);
+      recordSourceDiagnostic({
+        sourceId: sourceId ?? label,
+        sourceName: sourceName ?? label,
+        operation: label,
+        status: "timeout",
+        startedAt: new Date(Date.now() - timeoutMs).toISOString(),
+        finishedAt: new Date().toISOString(),
+        durationMs: timeoutMs,
+        message: `Analysis fallback used after ${timeoutMs} ms timeout.`
+      });
       resolve(fallback);
     }, timeoutMs);
   });
@@ -483,8 +503,8 @@ function buildSources(): DataSourceRef[] {
     {
       id: "metsaregister",
       name: "Metsaregistri avalik päring",
-      type: "official_rest",
-      detail: "register.metsad.ee/portaal/api/rest/eraldis/puu ja teatis/puu"
+      type: "official_wfs",
+      detail: "gsavalik.envir.ee/geoserver/metsaregister/wfs kihid eraldis ja teatis"
     },
     {
       id: "eelis",
@@ -1299,7 +1319,8 @@ function buildEvidencePackage({
   notices,
   changes,
   protectedAreas,
-  ecosystemBenefits
+  ecosystemBenefits,
+  diagnostics
 }: {
   area: Area;
   stands: ForestStand[];
@@ -1307,6 +1328,7 @@ function buildEvidencePackage({
   changes: ForestChange[];
   protectedAreas: ProtectedArea[];
   ecosystemBenefits: EcosystemBenefit[];
+  diagnostics: SourceDiagnostic[];
 }): ForestAreaEvidencePackage {
   const activeNotices = notices.filter((notice) => notice.status !== "archived");
   const archivedNotices = notices.filter(
@@ -1519,7 +1541,8 @@ function buildEvidencePackage({
       changes,
       protectedAreas,
       ecosystemBenefits
-    })
+    }),
+    diagnostics
   };
 }
 
@@ -1614,6 +1637,7 @@ export async function analyzeArea(
     }
   }
 
+  return withSourceDiagnostics(async () => {
   const timedOutSources: string[] = [];
   const [
     stands,
@@ -1628,42 +1652,54 @@ export async function analyzeArea(
       promise: provider.getForestStands(area.geometry, area.id, area),
       fallback: [],
       timeoutMs: 4500,
-      timedOutSources
+      timedOutSources,
+      sourceId: "metsaregister",
+      sourceName: "Metsaregister"
     }),
     withAnalysisTimeout<ForestNotice[]>({
       label: "metsaregister-notices",
       promise: provider.getForestNotices(area.geometry, area.id, area),
       fallback: [],
       timeoutMs: 4500,
-      timedOutSources
+      timedOutSources,
+      sourceId: "metsaregister",
+      sourceName: "Metsaregister"
     }),
     withAnalysisTimeout<ForestChange[]>({
       label: "forest-changes",
       promise: provider.getForestChanges(area.geometry, area.id, area),
       fallback: [],
       timeoutMs: 900,
-      timedOutSources
+      timedOutSources,
+      sourceId: "forest-changes",
+      sourceName: "Metsamuutused"
     }),
     withAnalysisTimeout<ProtectedArea[]>({
       label: "eelis",
       promise: provider.getProtectedAreas(area.geometry, area.id, area),
       fallback: [],
       timeoutMs: 3500,
-      timedOutSources
+      timedOutSources,
+      sourceId: "eelis",
+      sourceName: "EELIS"
     }),
     withAnalysisTimeout<EcosystemBenefit[]>({
       label: "elme",
       promise: provider.getEcosystemBenefits(area.geometry, area.id, area),
       fallback: [],
       timeoutMs: 2500,
-      timedOutSources
+      timedOutSources,
+      sourceId: "elme",
+      sourceName: "ELME"
     }),
     withAnalysisTimeout<SatelliteSignal | null>({
       label: "satellite-signal",
       promise: provider.getSatelliteSignal(area.id),
       fallback: null,
       timeoutMs: 900,
-      timedOutSources
+      timedOutSources,
+      sourceId: "sentinel-comparison",
+      sourceName: "Sentinel"
     })
   ]);
 
@@ -1729,13 +1765,15 @@ export async function analyzeArea(
     },
     { allowNetwork: false }
   );
+  const diagnostics = currentSourceDiagnostics();
   const evidencePackage = buildEvidencePackage({
     area,
     stands,
     notices,
     changes,
     protectedAreas,
-    ecosystemBenefits
+    ecosystemBenefits,
+    diagnostics
   });
   const normalizedEvidence = normalizeSelectedAreaEvidence({
     area,
@@ -1760,6 +1798,7 @@ export async function analyzeArea(
     sources: buildSources(),
     evidencePackage,
     normalizedEvidence,
+    diagnostics,
     rawFacts: {
       area,
       stands,
@@ -1780,6 +1819,7 @@ export async function analyzeArea(
   }
 
   return result;
+  });
 }
 
 export async function analyzeResolvedArea(
