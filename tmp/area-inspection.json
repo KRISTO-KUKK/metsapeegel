@@ -103,11 +103,11 @@
       ]
     },
     "aiNarrative": {
-      "mode": "openai",
-      "status": "generated",
-      "provider": "openai-responses",
-      "model": "gpt-4.1-mini",
-      "summary": "Valitud eramaal (katastritunnus 83604:001:0663, piirkond \"Karjatoa\", pindala ca 9,68 ha) on metsaregistris 12 eraldistega seotud metsainventuuri andmed aastast 2015. Ala kattub umbes 0,48 ha ulatuses ka EELISe kaudu kuvatava kaitse- või piiranguga (VEP nr 205608), mis annab konkreetsele osale metsast konteksti, kuid ei anna juriidilist hinnangut selle ala kasutamise õigusele või keeluvõimalusele. Avalikust metsateatiste registrist selle ala kohta teatisi ei leitud ning kaugselt tehtud muutuste kiht selles vaates kinnitust ei anna. Inventuuriandmed võivad olla aegunud ja kaitse- või piiranguinfot ei tohiks pidada automaatseks keeluks. Soovitan Keskkonnaportaali Metsapeegli vaates kuvada lisaks selgitusteksti, mis rõhutab kaitsekonteksti mitteõiguslikku iseloomu ning inventuuriandmete ajakohasuse piiranguid."
+      "mode": "template",
+      "status": "ready",
+      "provider": "deterministic-template",
+      "summary": "Selle ala kohta saab näidata avalikke andmeid, kuid kasutaja vajab automaatset selgitust. Kaitse- või piiranguala kattuvust võib ekslikult pidada automaatseks keeluks või rikkumise tunnuseks. Soovitus: avalik, aga vajab automaatset selgitust. Avalik info ei näita kõiki metsas toimunud muutusi.",
+      "note": "AI-liides on valmis. OPENAI_API_KEY või OLLAMA_BASE_URL lisamisel saab sama sisendi anda mudelile."
     },
     "whatHappened": [
       "Ala kattub EELISe kaitse- või piiranguandmetega.",
@@ -119,7 +119,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 1",
-        "description": "Peamine puuliik: sanglepp. Arenguklass: küps mets. Kasvukohatüüp: angervaksa. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: sanglepp. Arenguklass: küps mets. Kasvukohatüüp: angervaksa. Puistu keskmine vanus: 83 a. Keskmine raievanus: 64 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -127,7 +127,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 2",
-        "description": "Peamine puuliik: kask. Arenguklass: keskealine mets. Kasvukohatüüp: angervaksa. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: kask. Arenguklass: keskealine mets. Kasvukohatüüp: angervaksa. Puistu keskmine vanus: 46 a. Keskmine raievanus: 60 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -135,7 +135,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 3",
-        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: mustika. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: mustika. Puistu keskmine vanus: 111 a. Keskmine raievanus: 87 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -143,7 +143,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 4",
-        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: tarna-angervaksa. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: tarna-angervaksa. Puistu keskmine vanus: 110 a. Keskmine raievanus: 85 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -151,7 +151,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 5",
-        "description": "Peamine puuliik: kask. Arenguklass: küps mets. Kasvukohatüüp: angervaksa. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: kask. Arenguklass: küps mets. Kasvukohatüüp: angervaksa. Puistu keskmine vanus: 81 a. Keskmine raievanus: 68 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -159,7 +159,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 6",
-        "description": "Peamine puuliik: mänd. Arenguklass: keskealine mets. Kasvukohatüüp: mustika. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: mänd. Arenguklass: keskealine mets. Kasvukohatüüp: mustika. Puistu keskmine vanus: 85 a. Keskmine raievanus: 87 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -167,7 +167,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 7",
-        "description": "Peamine puuliik: kask. Arenguklass: keskealine mets. Kasvukohatüüp: angervaksa. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: kask. Arenguklass: keskealine mets. Kasvukohatüüp: angervaksa. Puistu keskmine vanus: 46 a. Keskmine raievanus: 74 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -175,7 +175,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 8",
-        "description": "Peamine puuliik: mänd. Arenguklass: valmiv mets. Kasvukohatüüp: mustika. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: mänd. Arenguklass: valmiv mets. Kasvukohatüüp: mustika. Puistu keskmine vanus: 100 a. Keskmine raievanus: 98 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -183,7 +183,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 9",
-        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: mustika. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: mustika. Puistu keskmine vanus: 131 a. Keskmine raievanus: 88 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -191,7 +191,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 10",
-        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: mustika. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: mustika. Puistu keskmine vanus: 111 a. Keskmine raievanus: 87 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -199,7 +199,7 @@
         "kind": "registry",
         "tone": "warning",
         "title": "Metsaregistri eraldis 11",
-        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: tarna-angervaksa. Inventuuriaasta: 2015.",
+        "description": "Peamine puuliik: mänd. Arenguklass: küps mets. Kasvukohatüüp: tarna-angervaksa. Puistu keskmine vanus: 106 a. Keskmine raievanus: 84 a. Inventuuriaasta: 2015.",
         "year": 2015
       },
       {
@@ -558,6 +558,10 @@
               "developmentClass": "küps mets",
               "siteType": "angervaksa",
               "inventoryYear": 2015,
+              "averageAge": 83,
+              "averageHarvestAge": 64,
+              "heightM": 26.1,
+              "bonitetClass": "2",
               "registryStage": "aegunud",
               "areaHa": 0.5
             }
@@ -574,6 +578,10 @@
               "developmentClass": "keskealine mets",
               "siteType": "angervaksa",
               "inventoryYear": 2015,
+              "averageAge": 46,
+              "averageHarvestAge": 60,
+              "heightM": 30.5,
+              "bonitetClass": "1",
               "registryStage": "aegunud",
               "areaHa": 0.4
             }
@@ -590,6 +598,10 @@
               "developmentClass": "küps mets",
               "siteType": "mustika",
               "inventoryYear": 2015,
+              "averageAge": 111,
+              "averageHarvestAge": 87,
+              "heightM": 28,
+              "bonitetClass": "1",
               "registryStage": "aegunud",
               "areaHa": 0.8
             }
@@ -606,6 +618,10 @@
               "developmentClass": "küps mets",
               "siteType": "tarna-angervaksa",
               "inventoryYear": 2015,
+              "averageAge": 110,
+              "averageHarvestAge": 85,
+              "heightM": 26,
+              "bonitetClass": "2",
               "registryStage": "aegunud",
               "areaHa": 1.5
             }
@@ -622,6 +638,10 @@
               "developmentClass": "küps mets",
               "siteType": "angervaksa",
               "inventoryYear": 2015,
+              "averageAge": 81,
+              "averageHarvestAge": 68,
+              "heightM": 29,
+              "bonitetClass": "1",
               "registryStage": "aegunud",
               "areaHa": 0.3
             }
@@ -638,6 +658,10 @@
               "developmentClass": "keskealine mets",
               "siteType": "mustika",
               "inventoryYear": 2015,
+              "averageAge": 85,
+              "averageHarvestAge": 87,
+              "heightM": 26.3,
+              "bonitetClass": "2",
               "registryStage": "aegunud",
               "areaHa": 1
             }
@@ -654,6 +678,10 @@
               "developmentClass": "keskealine mets",
               "siteType": "angervaksa",
               "inventoryYear": 2015,
+              "averageAge": 46,
+              "averageHarvestAge": 74,
+              "heightM": 26.6,
+              "bonitetClass": "2",
               "registryStage": "aegunud",
               "areaHa": 0.2
             }
@@ -670,6 +698,10 @@
               "developmentClass": "valmiv mets",
               "siteType": "mustika",
               "inventoryYear": 2015,
+              "averageAge": 100,
+              "averageHarvestAge": 98,
+              "heightM": 23.1,
+              "bonitetClass": "3",
               "registryStage": "aegunud",
               "areaHa": 1.2
             }
@@ -686,6 +718,10 @@
               "developmentClass": "küps mets",
               "siteType": "mustika",
               "inventoryYear": 2015,
+              "averageAge": 131,
+              "averageHarvestAge": 88,
+              "heightM": 26.1,
+              "bonitetClass": "2",
               "registryStage": "aegunud",
               "areaHa": 1.8
             }
@@ -702,6 +738,10 @@
               "developmentClass": "küps mets",
               "siteType": "mustika",
               "inventoryYear": 2015,
+              "averageAge": 111,
+              "averageHarvestAge": 87,
+              "heightM": 28,
+              "bonitetClass": "1",
               "registryStage": "aegunud",
               "areaHa": 0.3
             }
@@ -718,6 +758,10 @@
               "developmentClass": "küps mets",
               "siteType": "tarna-angervaksa",
               "inventoryYear": 2015,
+              "averageAge": 106,
+              "averageHarvestAge": 84,
+              "heightM": 25,
+              "bonitetClass": "2",
               "registryStage": "aegunud",
               "areaHa": 1.5
             }
@@ -734,6 +778,8 @@
               "developmentClass": "noorendik",
               "siteType": "tarna-angervaksa",
               "inventoryYear": 2015,
+              "heightM": 21.5,
+              "bonitetClass": "3",
               "registryStage": "aegunud",
               "areaHa": 0.1
             }
@@ -1387,7 +1433,7 @@
           "scope": "selected_area",
           "priority": "critical",
           "status": "loaded",
-          "url": "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine",
+          "url": "https://ky.kataster.ee/ky/83604%3A001%3A0663",
           "description": "Valitud katastriüksuse geomeetria ja pindala.",
           "aiUse": "Määrab, millise konkreetse alaga kõik muud andmed seotakse.",
           "userVisibility": "always",
@@ -1400,7 +1446,7 @@
           "scope": "selected_area",
           "priority": "high",
           "status": "loaded",
-          "url": "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine",
+          "url": "https://ky.kataster.ee/ky/83604%3A001%3A0663",
           "description": "Katastritunnus, avalik omandivorm, sihtotstarve ja kinnistu kontekst.",
           "aiUse": "Vastab omandi vormi ja katastri tausta küsimustele ilma isikuandmeid avaldamata.",
           "userVisibility": "always",
@@ -1413,7 +1459,7 @@
           "scope": "selected_area",
           "priority": "critical",
           "status": "loaded",
-          "url": "https://geoportaal.maaamet.ee/est/kaardirakendused/metsaregister/metsaregistri-kaardirakenduse-kirjeldus-p966.html",
+          "url": "https://register.metsad.ee/eraldis/1429525",
           "description": "Metsainventeerimise eraldised, puistu omadused ja avalikud metsateatised.",
           "aiUse": "Põhiallikas puuliigi, inventuuriaasta, arenguklassi ja teatise küsimustes.",
           "userVisibility": "always",
@@ -1438,7 +1484,7 @@
           "scope": "spatial_context",
           "priority": "high",
           "status": "loaded",
-          "url": "https://keskkonnaportaal.ee/et/ruumiandmete-teenused-ja-eelise-kasutamine",
+          "url": "https://register.keskkonnaportaal.ee/register?kkr_kood=VEP205608&mount=view",
           "description": "Kaitsealade, piirangute, Natura alade ja vääriselupaikade avalikud kattuvused.",
           "aiUse": "Selgitab, kas ala puhul peab kasutajale näitama looduskaitselist konteksti.",
           "userVisibility": "always",
@@ -1464,7 +1510,7 @@
           "scope": "spatial_context",
           "priority": "medium",
           "status": "loaded",
-          "url": "https://elmegs.envir.ee/geoserver/elme/ows?service=WFS&version=2.0.0&request=GetCapabilities",
+          "url": "https://keskkonnaportaal.ee/et/teemad/loodushuved",
           "description": "Puidutooraine potentsiaali, väärtuse ja metsa biomassi süsiniku kaardikihid.",
           "aiUse": "Annab kasutajale majandusliku ja ökosüsteemse taustakonteksti pärast põhifaktide näitamist.",
           "userVisibility": "when_relevant",
@@ -1593,8 +1639,8 @@
           "id": "maaamet-etak-forest",
           "name": "Valitud katastriüksuse geomeetria",
           "provider": "Maa- ja Ruumiamet",
-          "url": "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "url": "https://ky.kataster.ee/ky/83604%3A001%3A0663",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "loaded",
           "warning": "Otsingu tulemus on katastriüksus; see ei tähenda, et kogu kinnistu on mets."
         },
@@ -1602,8 +1648,8 @@
           "id": "maaamet-cadastre",
           "name": "Katastriüksuse kontekst",
           "provider": "Maa- ja Ruumiamet",
-          "url": "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "url": "https://ky.kataster.ee/ky/83604%3A001%3A0663",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "loaded",
           "warning": "Eraomaniku nime ei kuvata; kasutatakse ainult avalikku omandivormi."
         },
@@ -1611,16 +1657,16 @@
           "id": "metsaregister",
           "name": "Metsaregister",
           "provider": "Kliimaministeerium / Metsaregister",
-          "url": "https://geoportaal.maaamet.ee/est/kaardirakendused/metsaregister/metsaregistri-kaardirakenduse-kirjeldus-p966.html",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "url": "https://register.metsad.ee/eraldis/1429525",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "loaded"
         },
         {
           "id": "eelis",
           "name": "EELIS kaitse- ja piiranguandmed",
           "provider": "Keskkonnaagentuur",
-          "url": "https://keskkonnaportaal.ee/et/ruumiandmete-teenused-ja-eelise-kasutamine",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "url": "https://register.keskkonnaportaal.ee/register?kkr_kood=VEP205608&mount=view",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "loaded",
           "warning": "Tundlikke liigiandmeid ei kuvata detailse asukohana."
         },
@@ -1628,8 +1674,8 @@
           "id": "elme",
           "name": "Looduse hüvede / ELME kihid",
           "provider": "Keskkonnaagentuur / Keskkonnaportaal",
-          "url": "https://elmegs.envir.ee/geoserver/elme/ows?service=WFS&version=2.0.0&request=GetCapabilities",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "url": "https://keskkonnaportaal.ee/et/teemad/loodushuved",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "loaded",
           "warning": "ELME kihid annavad majandusliku ja ökosüsteemse konteksti; need ei ole raie lubatavuse otsus."
         },
@@ -1638,7 +1684,7 @@
           "name": "Metsamuutuste / LiDAR muutusetõend",
           "provider": "Maa- ja Ruumiamet",
           "url": "https://geoportaal.maaamet.ee/index.php?fatlayerid=metsamuutus_teemakaart&lang_id=1&page_id=966&plugin_act=getfatlayerid",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "not_connected",
           "warning": "Metsamuutuste teemakaardi kirjeldus on leitud, kuid avalik WFS URL puudub; WMS piltkihti ei kasutata valitud ala tõendina."
         },
@@ -1647,7 +1693,7 @@
           "name": "Aluskaart ja metsakiht",
           "provider": "Maa- ja Ruumiamet",
           "url": "https://geoportaal.maaamet.ee/est/teenused/wms-wfs-wcs-teenused-p65.html",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "loaded"
         },
         {
@@ -1655,7 +1701,7 @@
           "name": "KAIA avaandmete API",
           "provider": "Keskkonnaportaal",
           "url": "https://avaandmed.keskkonnaportaal.ee/swagger/v1/swagger.json",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "not_connected",
           "warning": "API on tuvastatud failide allalaadimise teenusena, kuid selle faile ei indekseerita selles prototüübis veel valitud ala faktideks."
         },
@@ -1664,7 +1710,7 @@
           "name": "SMI ja KESE metsaseire",
           "provider": "Keskkonnaagentuur",
           "url": "https://keskkonnaportaal.ee/et/teemad/mets",
-          "retrievedAt": "2026-05-28T21:13:49.637Z",
+          "retrievedAt": "2026-05-30T06:27:44.954Z",
           "status": "not_connected",
           "warning": "SMI ja seireandmed on sobivamad üleriigilise tausta jaoks; neid ei kasutata siin üksiku metsaala tõendina."
         }
@@ -1815,7 +1861,7 @@
           "id": "registry-stands",
           "sourceId": "metsaregister",
           "label": "Metsaregistri eraldised",
-          "summary": "12 eraldist; 2015: 12 eraldise inventuuriandmed.",
+          "summary": "12 eraldist; 2015: 12 eraldise inventuuriandmed. Puistute keskmine vanus: 46-131 a. Keskmine raievanus andmetes: 60-98 a. 8/11 eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.",
           "status": "loaded",
           "tone": "positive",
           "targetId": "card-registry"
@@ -1871,7 +1917,7 @@
           "id": "maaamet-etak-forest",
           "name": "Valitud katastriüksuse geomeetria",
           "provider": "Maa- ja Ruumiamet",
-          "url": "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine",
+          "url": "https://ky.kataster.ee/ky/83604%3A001%3A0663",
           "status": "loaded",
           "targetId": "source-maaamet-etak-forest",
           "summary": "Otsingu tulemus on katastriüksus; see ei tähenda, et kogu kinnistu on mets."
@@ -1880,7 +1926,7 @@
           "id": "maaamet-cadastre",
           "name": "Katastriüksuse kontekst",
           "provider": "Maa- ja Ruumiamet",
-          "url": "https://www.kataster.ee/avaandmed/katastriuksuste-allalaadimine",
+          "url": "https://ky.kataster.ee/ky/83604%3A001%3A0663",
           "status": "loaded",
           "targetId": "source-maaamet-cadastre",
           "summary": "Eraomaniku nime ei kuvata; kasutatakse ainult avalikku omandivormi."
@@ -1889,7 +1935,7 @@
           "id": "metsaregister",
           "name": "Metsaregister",
           "provider": "Kliimaministeerium / Metsaregister",
-          "url": "https://geoportaal.maaamet.ee/est/kaardirakendused/metsaregister/metsaregistri-kaardirakenduse-kirjeldus-p966.html",
+          "url": "https://register.metsad.ee/eraldis/1429525",
           "status": "loaded",
           "targetId": "source-metsaregister",
           "summary": "Allikas on selle ala andmepakis kasutusel."
@@ -1898,7 +1944,7 @@
           "id": "eelis",
           "name": "EELIS kaitse- ja piiranguandmed",
           "provider": "Keskkonnaagentuur",
-          "url": "https://keskkonnaportaal.ee/et/ruumiandmete-teenused-ja-eelise-kasutamine",
+          "url": "https://register.keskkonnaportaal.ee/register?kkr_kood=VEP205608&mount=view",
           "status": "loaded",
           "targetId": "source-eelis",
           "summary": "Tundlikke liigiandmeid ei kuvata detailse asukohana."
@@ -1907,7 +1953,7 @@
           "id": "elme",
           "name": "Looduse hüvede / ELME kihid",
           "provider": "Keskkonnaagentuur / Keskkonnaportaal",
-          "url": "https://elmegs.envir.ee/geoserver/elme/ows?service=WFS&version=2.0.0&request=GetCapabilities",
+          "url": "https://keskkonnaportaal.ee/et/teemad/loodushuved",
           "status": "loaded",
           "targetId": "source-elme",
           "summary": "ELME kihid annavad majandusliku ja ökosüsteemse konteksti; need ei ole raie lubatavuse otsus."
@@ -1984,7 +2030,15 @@
         "oldestInventoryYear": 2015,
         "newestInventoryYear": 2015,
         "veryOldInventory": false,
-        "inventorySummary": "2015: 12 eraldise inventuuriandmed."
+        "inventorySummary": "2015: 12 eraldise inventuuriandmed.",
+        "standAgeSummary": "Puistute keskmine vanus: 46-131 a. Keskmine raievanus andmetes: 60-98 a. 8/11 eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.",
+        "standAgeMin": 46,
+        "standAgeMax": 131,
+        "averageHarvestAgeMin": 60,
+        "averageHarvestAgeMax": 98,
+        "standsWithAgeCount": 11,
+        "standsWithHarvestAgeCount": 11,
+        "standsAtOrAboveAverageHarvestAge": 8
       },
       "ecosystemContext": {
         "sourceStatus": "loaded",
@@ -2205,6 +2259,10 @@
           "developmentClass": "küps mets",
           "siteType": "angervaksa",
           "inventoryYear": 2015,
+          "averageAge": 83,
+          "averageHarvestAge": 64,
+          "heightM": 26.1,
+          "bonitetClass": "2",
           "registryStage": "aegunud",
           "areaHa": 0.5,
           "geometry": {
@@ -2249,6 +2307,10 @@
           "developmentClass": "keskealine mets",
           "siteType": "angervaksa",
           "inventoryYear": 2015,
+          "averageAge": 46,
+          "averageHarvestAge": 60,
+          "heightM": 30.5,
+          "bonitetClass": "1",
           "registryStage": "aegunud",
           "areaHa": 0.4,
           "geometry": {
@@ -2297,6 +2359,10 @@
           "developmentClass": "küps mets",
           "siteType": "mustika",
           "inventoryYear": 2015,
+          "averageAge": 111,
+          "averageHarvestAge": 87,
+          "heightM": 28,
+          "bonitetClass": "1",
           "registryStage": "aegunud",
           "areaHa": 0.8,
           "geometry": {
@@ -2361,6 +2427,10 @@
           "developmentClass": "küps mets",
           "siteType": "tarna-angervaksa",
           "inventoryYear": 2015,
+          "averageAge": 110,
+          "averageHarvestAge": 85,
+          "heightM": 26,
+          "bonitetClass": "2",
           "registryStage": "aegunud",
           "areaHa": 1.5,
           "geometry": {
@@ -2425,6 +2495,10 @@
           "developmentClass": "küps mets",
           "siteType": "angervaksa",
           "inventoryYear": 2015,
+          "averageAge": 81,
+          "averageHarvestAge": 68,
+          "heightM": 29,
+          "bonitetClass": "1",
           "registryStage": "aegunud",
           "areaHa": 0.3,
           "geometry": {
@@ -2465,6 +2539,10 @@
           "developmentClass": "keskealine mets",
           "siteType": "mustika",
           "inventoryYear": 2015,
+          "averageAge": 85,
+          "averageHarvestAge": 87,
+          "heightM": 26.3,
+          "bonitetClass": "2",
           "registryStage": "aegunud",
           "areaHa": 1,
           "geometry": {
@@ -2525,6 +2603,10 @@
           "developmentClass": "keskealine mets",
           "siteType": "angervaksa",
           "inventoryYear": 2015,
+          "averageAge": 46,
+          "averageHarvestAge": 74,
+          "heightM": 26.6,
+          "bonitetClass": "2",
           "registryStage": "aegunud",
           "areaHa": 0.2,
           "geometry": {
@@ -2569,6 +2651,10 @@
           "developmentClass": "valmiv mets",
           "siteType": "mustika",
           "inventoryYear": 2015,
+          "averageAge": 100,
+          "averageHarvestAge": 98,
+          "heightM": 23.1,
+          "bonitetClass": "3",
           "registryStage": "aegunud",
           "areaHa": 1.2,
           "geometry": {
@@ -2633,6 +2719,10 @@
           "developmentClass": "küps mets",
           "siteType": "mustika",
           "inventoryYear": 2015,
+          "averageAge": 131,
+          "averageHarvestAge": 88,
+          "heightM": 26.1,
+          "bonitetClass": "2",
           "registryStage": "aegunud",
           "areaHa": 1.8,
           "geometry": {
@@ -2693,6 +2783,10 @@
           "developmentClass": "küps mets",
           "siteType": "mustika",
           "inventoryYear": 2015,
+          "averageAge": 111,
+          "averageHarvestAge": 87,
+          "heightM": 28,
+          "bonitetClass": "1",
           "registryStage": "aegunud",
           "areaHa": 0.3,
           "geometry": {
@@ -2745,6 +2839,10 @@
           "developmentClass": "küps mets",
           "siteType": "tarna-angervaksa",
           "inventoryYear": 2015,
+          "averageAge": 106,
+          "averageHarvestAge": 84,
+          "heightM": 25,
+          "bonitetClass": "2",
           "registryStage": "aegunud",
           "areaHa": 1.5,
           "geometry": {
@@ -2801,6 +2899,8 @@
           "developmentClass": "noorendik",
           "siteType": "tarna-angervaksa",
           "inventoryYear": 2015,
+          "heightM": 21.5,
+          "bonitetClass": "3",
           "registryStage": "aegunud",
           "areaHa": 0.1,
           "geometry": {
@@ -2855,6 +2955,8 @@
           "type": "habitat",
           "publicDetailLevel": "full",
           "overlapHa": 0.48,
+          "registryCode": "VEP205608",
+          "sourceLayer": "eelis:kr_vep",
           "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -3321,24 +3423,22 @@
       "mode": "openai",
       "status": "generated",
       "provider": "openai-responses",
-      "question": "Võta kokku, mis siin tõenäoliselt toimunud on",
+      "question": "Mida tähendab minu jaoks, et need kaitsealad või Natura/VEP kattuvused hõlmavad minu metsaala?",
       "verdict": "partial",
       "verdictLabel": "Osaliselt toetatud",
       "confidence": 65,
-      "shortAnswer": "Andmepakk ei kinnita siin toimunud raiet ega muud konkreetset tegevust, kuid näitab registris kirjeldatud metsaala koos keskkonnakontekstiga.",
-      "explanation": "Aktiivseid ega arhiveeritud metsateatisi ei leitud ning metsamuutuste/LiDAR tõend on ühendamata, mistõttu raiet või muud tegevust kinnitada ei saa.\nMetsaregister jagab ala 12 eraldiseks, mis võib viidata kirjumale metsakoosseisule või detailsele inventuurile.\nEELIS näitab kaitse- või keskkonnakattuvust, mis muudab ala tõlgenduse tundlikumaks.\nInventuuri andmed on aastast 2015 ja ei ole vanad, seega ei ole see peamine takistus järelduste tegemisel.\nELME andmed annavad majandusliku ja ökosüsteemse tausta, kuid ei tõenda raiet ega tegevuse lubatavust.",
+      "shortAnswer": "See tähendab praktiliselt: ära loe seda ala tavaliseks piiranguta tulundusmetsaks, vaid kontrolli enne tegevust vööndit, kaitse-eeskirja ja Keskkonnaameti nõusoleku vajadust.",
+      "explanation": "Sinu alaga kattub andmepakis: VEP nr.205608, kattuvus ligikaudu 0.48 ha.\nÕigusraam: Looduskaitseseaduse § 30 puhul on sihtkaitsevööndis majandustegevus ja loodusvarade kasutamine üldjuhul keelatud; § 31 puhul on piiranguvööndis majandustegevus lubatud kitsendustega ja täpsed tingimused tulevad kaitse-eeskirjast.\nEELIS kattuvuste teadaolev koondpind on umbes 0.48 ha; see näitab, et kaitsekontekst puudutab päriselt valitud geomeetriat, mitte ainult kauget naaberalat.\nVEP ehk vääriselupaik on tugev looduskaitseline signaal vana või väärtusliku metsaosa kohta; majandamisotsus vajab eraldi piirangu ja kokkuleppe kontrolli.\nKui piirang puudutab eraomandit, võib järgmiseks kontrollida, kas konkreetne vöönd või VEP annab aluse hüvitisele, toetusele või maamaksusoodustusele; seda see andmepakk automaatselt ei otsusta.\nJärgmine praktiline samm on vaadata täpset vööndit ja kaitse-eeskirja, mitte teha otsust ainult kattuvuse nime järgi.",
       "canSay": [
-        "Metsaregistris on 12 eraldist, keskmise suurusega umbes 0.8 ha.",
-        "Aktiivseid ega arhiveeritud metsateatisi ei ole.",
-        "EELIS andmetes on 1 kaitsekattuvusala.",
-        "ELME andmetes on 4 puidutooraine ja 22 süsiniku kattuvust."
+        "Kaitsekattuvus on praktiline riskisignaal: enne metsamajanduslikku või muud looduskeskkonda mõjutavat tegevust tuleb kontrollida täpset vööndit ja kaitse-eeskirja.",
+        "Katastri avalik omandivorm: Eraomand."
       ],
       "cannotSay": [
-        "Raiet ega metsategevust ei saa kinnitada, sest metsamuutuste/LiDAR tõend puudub.",
-        "Eraldiste arv ei tõenda raiet, vaid näitab registri jaotust.",
-        "Kaitsekattuvus ei ole õiguslik otsus ega luba ega keel metsategevuseks.",
-        "Metsamuutuste/LiDAR muutusetõend on ühendamata ja seetõttu ei saa kinnitada tegelikku metsategevust.",
-        "KAIA avaandmete API ja SMI/KESE metsaseire andmed puuduvad või ei ole kasutusel."
+        "Metsatark ei saa ainult EELIS kattuvuse põhjal öelda, et konkreetne tegevus on lubatud või keelatud.",
+        "Metsatark ei tea selles prototüübis alati täpset vööndit, kaitse-eeskirja erisust ega Keskkonnaameti menetlusotsust.",
+        "Hüvitise või maamaksusoodustuse õigus vajab toetuskõlbliku ala ja taotlustingimuste kontrolli.",
+        "Täpne kaitsevöönd ja konkreetne kaitse-eeskiri ei pruugi olla andmepakis otsustusena olemas.",
+        "Ametlik menetlusotsus või Keskkonnaameti nõusolek ei ole andmepakis."
       ],
       "evidence": [
         {
@@ -3360,7 +3460,310 @@
         {
           "id": "registry-stands",
           "label": "Metsaregistri eraldised",
-          "detail": "12 eraldist; 2015: 12 eraldise inventuuriandmed.",
+          "detail": "12 eraldist; 2015: 12 eraldise inventuuriandmed. Puistute keskmine vanus: 46-131 a. Keskmine raievanus andmetes: 60-98 a. 8/11 eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.",
+          "source": "Metsaregister",
+          "sourceId": "metsaregister",
+          "tone": "success"
+        },
+        {
+          "id": "registry-active-notices",
+          "label": "Aktiivsed metsateatised",
+          "detail": "Aktiivseid metsateatisi ei leitud.",
+          "source": "Metsaregister",
+          "sourceId": "metsaregister",
+          "tone": "success"
+        },
+        {
+          "id": "registry-archived-notices",
+          "label": "Arhiveeritud metsateatised",
+          "detail": "Arhiveeritud metsateatisi ei leitud.",
+          "source": "Metsaregister",
+          "sourceId": "metsaregister",
+          "tone": "info"
+        },
+        {
+          "id": "protection-summary",
+          "label": "EELIS kattuvused",
+          "detail": "1 kaitse-, Natura-, VEP- või elupaigagruppi.",
+          "source": "EELIS",
+          "sourceId": "eelis",
+          "tone": "warning"
+        },
+        {
+          "id": "forest-change-proof",
+          "label": "Metsamuutuste/LiDAR tõend",
+          "detail": "Ühendamata; raie toimumist ei saa selle prototüübi põhjal kinnitada.",
+          "source": "Metsamuutused/LiDAR",
+          "sourceId": "forest-changes",
+          "tone": "danger"
+        },
+        {
+          "id": "elme-context",
+          "label": "ELME looduse hüved",
+          "detail": "ELME kontekst: leiti puidutooraine ja/või süsiniku hinnangud; need annavad majandusliku ja ökosüsteemse tausta, kuid ei tõenda raiet ega tegevuse lubatavust. Puidutooraine kattuvusi: 4. Süsiniku kattuvusi: 22. Muid ELME kattuvusi: 1.",
+          "source": "ELME",
+          "sourceId": "elme",
+          "tone": "info"
+        }
+      ],
+      "evidenceIds": [
+        "protection-summary",
+        "cadastre-context"
+      ],
+      "mapHints": [
+        "Vaata täpsemalt EELIS kaitsealade kaardilt, millises vööndis või kaitse-eeskirja alal su mets asub.",
+        "Kontrolli Keskkonnaameti kodulehelt või pöördu Keskkonnaameti poole täpsema info saamiseks kaitse-eeskirja ja piirangute kohta."
+      ],
+      "followUps": [
+        "Millises kaitsevööndis minu metsaala asub?",
+        "Kuidas saan teada, millised piirangud kehtivad VEP nr.205608 alal?",
+        "Kas minu metsaala kaitsekattuvus võib anda õiguse toetusele või hüvitisele?",
+        "Millised on järgmised sammud, kui minu metsaalal on kaitsekattuvus?"
+      ],
+      "sources": [
+        {
+          "id": "maaamet-etak-forest",
+          "name": "Maa- ja Ruumiameti ETAK metsapolügoonid",
+          "type": "official_wfs",
+          "detail": "ETAK e_305_puittaimestik_a WFS; tyyp_tekst = Mets"
+        },
+        {
+          "id": "maaamet-cadastre",
+          "name": "Maa- ja Ruumiameti katastri taust",
+          "type": "official_wfs",
+          "detail": "Avalik kataster WFS; kuvatakse katastritunnus ja omandivorm, mitte eraomaniku nime"
+        },
+        {
+          "id": "metsaregister",
+          "name": "Metsaregistri avalik päring",
+          "type": "official_rest",
+          "detail": "register.metsad.ee/portaal/api/rest/eraldis/puu ja teatis/puu"
+        },
+        {
+          "id": "eelis",
+          "name": "EELIS avalik WFS",
+          "type": "official_wfs",
+          "detail": "Keskkonnaagentuuri EELIS WFS kaitse-, Natura- ja vääriselupaiga kihid"
+        },
+        {
+          "id": "elme",
+          "name": "Looduse hüvede / ELME WFS",
+          "type": "official_wfs",
+          "detail": "Puidutooraine ja metsa puitsesse biomassi seotud süsiniku kaardikihid"
+        },
+        {
+          "id": "kaia",
+          "name": "KAIA avaandmete failiteenus",
+          "type": "future_api",
+          "detail": "Keskkonnaportaali avaandmete failide allalaadimise API; vajab eraldi andmefailide indekseerimist"
+        },
+        {
+          "id": "smi-kese",
+          "name": "SMI ja KESE metsaseire",
+          "type": "future_api",
+          "detail": "Üleriigilised seire- ja valikuuringuandmed; sobivad taustatrendiks, mitte üksiku kliki fakti tõendiks"
+        },
+        {
+          "id": "maaamet-map",
+          "name": "Maa- ja Ruumiameti aluskaart ja metsakiht",
+          "type": "official_wms",
+          "detail": "kaart.maaamet.ee/wms/alus-geo"
+        }
+      ],
+      "model": "gpt-4.1-mini"
+    },
+    {
+      "mode": "template",
+      "status": "ready",
+      "provider": "deterministic-forest-law",
+      "question": "Kas puude vanuse ja Metsaregistri andmete järgi oleks siin raie üldse mõeldav?",
+      "verdict": "partial",
+      "verdictLabel": "Osaliselt toetatud",
+      "confidence": 65,
+      "shortAnswer": "Vanuse poolelt on raie mõeldav vähemalt osal eraldistest: 8/11 vanuseandmetega eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.",
+      "explanation": "Puistute keskmine vanus: 46-131 a. Keskmine raievanus andmetes: 60-98 a. 8/11 eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.\nÜldreegel: lageraie ja turberaie vanusepoolne sobivus sõltub puistu koosseisuga kaalutud keskmisest vanusest ning raievanusest; sanitaarraie võib olla võimalik ka eri vanuses puistus, aga ainult sanitaarraie tingimustel.\nSelle ala kaitsekattuvus võib tavalisest raievanuse loogikast rangem olla, seega tuleb kontrollida kaitsevööndit ja kaitse-eeskirja.",
+      "canSay": [
+        "Peamised puuliigid andmetes: mänd (7), kask (3), kuusk, sanglepp.",
+        "Arenguklassid andmetes: küps mets (7), keskealine mets (3), noorendik, valmiv mets.",
+        "Puistute keskmine vanus: 46-131 a. Keskmine raievanus andmetes: 60-98 a. 8/11 eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle."
+      ],
+      "cannotSay": [
+        "Inventuuriaasta ei ole puude vanus.",
+        "Vanuse võrdlus ei ole raieluba ega õiguslik lõppotsus.",
+        "Raie mõeldavus vajab lisaks raieliiki, kaitsekorda ja ametliku menetluse kontrolli."
+      ],
+      "evidence": [
+        {
+          "id": "area-base",
+          "label": "Valitud ala",
+          "detail": "Valitud katastriüksus või ala, pindala 9.68 ha.",
+          "source": "ETAK",
+          "sourceId": "maaamet-etak-forest",
+          "tone": "info"
+        },
+        {
+          "id": "cadastre-context",
+          "label": "Katastriüksus",
+          "detail": "katastriüksus 83604:001:0663 · eraomand · maatulundusmaa",
+          "source": "Kataster",
+          "sourceId": "maaamet-cadastre",
+          "tone": "success"
+        },
+        {
+          "id": "registry-stands",
+          "label": "Metsaregistri eraldised",
+          "detail": "12 eraldist; 2015: 12 eraldise inventuuriandmed. Puistute keskmine vanus: 46-131 a. Keskmine raievanus andmetes: 60-98 a. 8/11 eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.",
+          "source": "Metsaregister",
+          "sourceId": "metsaregister",
+          "tone": "success"
+        },
+        {
+          "id": "registry-active-notices",
+          "label": "Aktiivsed metsateatised",
+          "detail": "Aktiivseid metsateatisi ei leitud.",
+          "source": "Metsaregister",
+          "sourceId": "metsaregister",
+          "tone": "success"
+        },
+        {
+          "id": "registry-archived-notices",
+          "label": "Arhiveeritud metsateatised",
+          "detail": "Arhiveeritud metsateatisi ei leitud.",
+          "source": "Metsaregister",
+          "sourceId": "metsaregister",
+          "tone": "info"
+        },
+        {
+          "id": "protection-summary",
+          "label": "EELIS kattuvused",
+          "detail": "1 kaitse-, Natura-, VEP- või elupaigagruppi.",
+          "source": "EELIS",
+          "sourceId": "eelis",
+          "tone": "warning"
+        },
+        {
+          "id": "forest-change-proof",
+          "label": "Metsamuutuste/LiDAR tõend",
+          "detail": "Ühendamata; raie toimumist ei saa selle prototüübi põhjal kinnitada.",
+          "source": "Metsamuutused/LiDAR",
+          "sourceId": "forest-changes",
+          "tone": "danger"
+        },
+        {
+          "id": "elme-context",
+          "label": "ELME looduse hüved",
+          "detail": "ELME kontekst: leiti puidutooraine ja/või süsiniku hinnangud; need annavad majandusliku ja ökosüsteemse tausta, kuid ei tõenda raiet ega tegevuse lubatavust. Puidutooraine kattuvusi: 4. Süsiniku kattuvusi: 22. Muid ELME kattuvusi: 1.",
+          "source": "ELME",
+          "sourceId": "elme",
+          "tone": "info"
+        }
+      ],
+      "evidenceIds": [
+        "registry-stands",
+        "protection-summary"
+      ],
+      "mapHints": [],
+      "followUps": [
+        "Kas kaitsekattuvus muudab seda järeldust?",
+        "Kas siin on metsateatis olemas?",
+        "Selgita raievanust lihtsamalt."
+      ],
+      "sources": [
+        {
+          "id": "maaamet-etak-forest",
+          "name": "Maa- ja Ruumiameti ETAK metsapolügoonid",
+          "type": "official_wfs",
+          "detail": "ETAK e_305_puittaimestik_a WFS; tyyp_tekst = Mets"
+        },
+        {
+          "id": "maaamet-cadastre",
+          "name": "Maa- ja Ruumiameti katastri taust",
+          "type": "official_wfs",
+          "detail": "Avalik kataster WFS; kuvatakse katastritunnus ja omandivorm, mitte eraomaniku nime"
+        },
+        {
+          "id": "metsaregister",
+          "name": "Metsaregistri avalik päring",
+          "type": "official_rest",
+          "detail": "register.metsad.ee/portaal/api/rest/eraldis/puu ja teatis/puu"
+        },
+        {
+          "id": "eelis",
+          "name": "EELIS avalik WFS",
+          "type": "official_wfs",
+          "detail": "Keskkonnaagentuuri EELIS WFS kaitse-, Natura- ja vääriselupaiga kihid"
+        },
+        {
+          "id": "elme",
+          "name": "Looduse hüvede / ELME WFS",
+          "type": "official_wfs",
+          "detail": "Puidutooraine ja metsa puitsesse biomassi seotud süsiniku kaardikihid"
+        },
+        {
+          "id": "kaia",
+          "name": "KAIA avaandmete failiteenus",
+          "type": "future_api",
+          "detail": "Keskkonnaportaali avaandmete failide allalaadimise API; vajab eraldi andmefailide indekseerimist"
+        },
+        {
+          "id": "smi-kese",
+          "name": "SMI ja KESE metsaseire",
+          "type": "future_api",
+          "detail": "Üleriigilised seire- ja valikuuringuandmed; sobivad taustatrendiks, mitte üksiku kliki fakti tõendiks"
+        },
+        {
+          "id": "maaamet-map",
+          "name": "Maa- ja Ruumiameti aluskaart ja metsakiht",
+          "type": "official_wms",
+          "detail": "kaart.maaamet.ee/wms/alus-geo"
+        }
+      ]
+    },
+    {
+      "mode": "openai",
+      "status": "generated",
+      "provider": "openai-responses",
+      "question": "Võta kokku, mis siin tõenäoliselt toimunud on",
+      "verdict": "partial",
+      "verdictLabel": "Osaliselt toetatud",
+      "confidence": 65,
+      "shortAnswer": "Andmepakk ei kinnita siin toimunud raiet ega muud konkreetset tegevust, kuid näitab registris kirjeldatud metsaala koos keskkonnakontekstiga.",
+      "explanation": "Valitud alal puuduvad aktiivsed ja arhiveeritud metsateatised ning metsamuutuste/LiDAR muutusetõend on ühendamata, mistõttu raiet ega muud metsategevust kinnitada ei saa.\nMetsaregistris on ala jaotatud 12 eraldiseks, mis viitab kirjumale metsakoosseisule või detailsele inventuurile.\nEELIS näitab 0.48 ha ulatuses kaitsekattuvust (VEP nr.205608), mis nõuab tegevuse tõlgendamisel ettevaatlikkust.\nELME andmed annavad majandusliku ja ökosüsteemse tausta, kuid ei tõenda tegevuse lubatavust.\nInventuuriandmed on aastast 2015 ja ei ole vanuse poolest punased lipud.",
+      "canSay": [
+        "Valitud alal on 12 Metsaregistri eraldist, keskmine eraldis on umbes 0.81 ha.",
+        "Aktiivseid ega arhiveeritud metsateatisi ei ole.",
+        "EELIS andmetes on 1 kaitsekattuvus (VEP nr.205608) hõlmatud 0.48 ha ulatuses.",
+        "ELME andmetes on 4 puidutooraine, 22 süsiniku ja 1 muu kattuvus."
+      ],
+      "cannotSay": [
+        "Raiet ega metsamuutust ei saa kinnitada, sest metsamuutuste/LiDAR tõend puudub.",
+        "Eraldiste arv ei tõenda raiet ega muud tegevust, vaid kirjeldab registri jaotust.",
+        "Kaitsekattuvus ei ole automaatne õiguslik otsus ega luba tegevuseks.",
+        "Metsamuutuste/LiDAR muutusetõend puudub ja ei ole ühendatud.",
+        "KAIA avaandmete API andmed ei ole kasutusel.",
+        "SMI ja KESE metsaseire andmed ei ole kasutusel."
+      ],
+      "evidence": [
+        {
+          "id": "area-base",
+          "label": "Valitud ala",
+          "detail": "Valitud katastriüksus või ala, pindala 9.68 ha.",
+          "source": "ETAK",
+          "sourceId": "maaamet-etak-forest",
+          "tone": "info"
+        },
+        {
+          "id": "cadastre-context",
+          "label": "Katastriüksus",
+          "detail": "katastriüksus 83604:001:0663 · eraomand · maatulundusmaa",
+          "source": "Kataster",
+          "sourceId": "maaamet-cadastre",
+          "tone": "success"
+        },
+        {
+          "id": "registry-stands",
+          "label": "Metsaregistri eraldised",
+          "detail": "12 eraldist; 2015: 12 eraldise inventuuriandmed. Puistute keskmine vanus: 46-131 a. Keskmine raievanus andmetes: 60-98 a. 8/11 eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.",
           "source": "Metsaregister",
           "sourceId": "metsaregister",
           "tone": "success"
@@ -3415,14 +3818,13 @@
         "elme-context"
       ],
       "mapHints": [
-        "Vaata Metsaregistri eraldiste jaotus, et mõista metsa struktuuri.",
-        "Kontrolli EELIS kaitsekattuvusi ala piires.",
-        "Vaata ELME kihte puidutooraine ja süsiniku hinnangute jaoks."
+        "Valitud ala on 9.68 ha suurune eraomandis katastriüksus 83604:001:0663.",
+        "Metsaregistri andmetel on ala jaotatud 12 eraldiseks, mis on suhteliselt peen jaotus."
       ],
       "followUps": [
-        "Kas on plaanis metsamuutuste/LiDAR tõend ühendada, et tegevust paremini jälgida?",
-        "Millist tüüpi kaitseala on VEP nr.205608 ja kuidas see mõjutab metsakasutust?",
-        "Kas on olemas uuemaid inventuuriandmeid peale 2015. aasta?"
+        "Kas soovite teada, kuidas kaitsekattuvus võib mõjutada metsa majandamist selles piirkonnas?",
+        "Kas soovite infot puude vanuse ja raievanuse kohta valitud alal?",
+        "Kas soovite teada, millised on üldised Eesti metsanduse taustandmed ja kontekst?"
       ],
       "sources": [
         {
@@ -3480,342 +3882,26 @@
       "mode": "openai",
       "status": "generated",
       "provider": "openai-responses",
-      "question": "Kas siin on raie kohta tõendeid?",
-      "verdict": "not_supported",
-      "verdictLabel": "Andmed ei toeta",
-      "confidence": 65,
-      "shortAnswer": "Praegune andmepakk ei toeta väidet, et siin toimus raie.",
-      "explanation": "Aktiivseid ega arhiveeritud metsateatisi ei leitud ning metsamuutuste/LiDAR tõend on ühendamata, mistõttu raie toimumist ei saa kinnitada. Metsateatis üksi ei tõenda tehtud raiet ja puuduvad muud otsesed muutusetõendid.",
-      "canSay": [
-        "Aktiivseid ega mittearhiveeritud metsateatisi ei leitud.",
-        "Arhiveeritud metsateatisi ei leitud.",
-        "Metsamuutuste/LiDAR tõend on ühendamata või puudub selles prototüübis."
-      ],
-      "cannotSay": [
-        "Raie toimumist ei saa kinnitada ilma tegeliku muutuse tõendita.",
-        "Kui metsateatist ei leitud, ei tohi väita, et raie oli selles andmepakis kavandatud.",
-        "Seda saab väita ainult siis, kui registriteatis ja tegelik muutusetõend koos seda toetavad.",
-        "EELIS kattuvus ei ole raie toimumise tõend.",
-        "ELME väärtused ei ole tõend raietegevuse kohta.",
-        "Ühendamata Metsamuutuste / LiDAR muutusetõend.",
-        "KAIA avaandmete API andmed.",
-        "SMI ja KESE metsaseire andmed."
-      ],
-      "evidence": [
-        {
-          "id": "area-base",
-          "label": "Valitud ala",
-          "detail": "Valitud katastriüksus või ala, pindala 9.68 ha.",
-          "source": "ETAK",
-          "sourceId": "maaamet-etak-forest",
-          "tone": "info"
-        },
-        {
-          "id": "cadastre-context",
-          "label": "Katastriüksus",
-          "detail": "katastriüksus 83604:001:0663 · eraomand · maatulundusmaa",
-          "source": "Kataster",
-          "sourceId": "maaamet-cadastre",
-          "tone": "success"
-        },
-        {
-          "id": "registry-stands",
-          "label": "Metsaregistri eraldised",
-          "detail": "12 eraldist; 2015: 12 eraldise inventuuriandmed.",
-          "source": "Metsaregister",
-          "sourceId": "metsaregister",
-          "tone": "success"
-        },
-        {
-          "id": "registry-active-notices",
-          "label": "Aktiivsed metsateatised",
-          "detail": "Aktiivseid metsateatisi ei leitud.",
-          "source": "Metsaregister",
-          "sourceId": "metsaregister",
-          "tone": "success"
-        },
-        {
-          "id": "registry-archived-notices",
-          "label": "Arhiveeritud metsateatised",
-          "detail": "Arhiveeritud metsateatisi ei leitud.",
-          "source": "Metsaregister",
-          "sourceId": "metsaregister",
-          "tone": "info"
-        },
-        {
-          "id": "protection-summary",
-          "label": "EELIS kattuvused",
-          "detail": "1 kaitse-, Natura-, VEP- või elupaigagruppi.",
-          "source": "EELIS",
-          "sourceId": "eelis",
-          "tone": "warning"
-        },
-        {
-          "id": "forest-change-proof",
-          "label": "Metsamuutuste/LiDAR tõend",
-          "detail": "Ühendamata; raie toimumist ei saa selle prototüübi põhjal kinnitada.",
-          "source": "Metsamuutused/LiDAR",
-          "sourceId": "forest-changes",
-          "tone": "danger"
-        },
-        {
-          "id": "elme-context",
-          "label": "ELME looduse hüved",
-          "detail": "ELME kontekst: leiti puidutooraine ja/või süsiniku hinnangud; need annavad majandusliku ja ökosüsteemse tausta, kuid ei tõenda raiet ega tegevuse lubatavust. Puidutooraine kattuvusi: 4. Süsiniku kattuvusi: 22. Muid ELME kattuvusi: 1.",
-          "source": "ELME",
-          "sourceId": "elme",
-          "tone": "info"
-        }
-      ],
-      "evidenceIds": [
-        "registry-active-notices",
-        "registry-archived-notices",
-        "forest-change-proof"
-      ],
-      "mapHints": [
-        "Vaadake Metsamuutuste / LiDAR muutusetõendi kihti, kui see tulevikus ühendatakse.",
-        "Kontrollige Metsaregistri metsateatiste kihte.",
-        "Vaadake EELIS kaitsekattuvuste kihti ala tundlikkuse hindamiseks."
-      ],
-      "followUps": [
-        "Kas soovite teada ala metsastruktuuri või kaitsekonteksti?",
-        "Kas huvitab metsateatiste ajalugu või inventuuriandmed?",
-        "Kas soovite infot ELME või EELIS kattuvuste kohta?"
-      ],
-      "sources": [
-        {
-          "id": "maaamet-etak-forest",
-          "name": "Maa- ja Ruumiameti ETAK metsapolügoonid",
-          "type": "official_wfs",
-          "detail": "ETAK e_305_puittaimestik_a WFS; tyyp_tekst = Mets"
-        },
-        {
-          "id": "maaamet-cadastre",
-          "name": "Maa- ja Ruumiameti katastri taust",
-          "type": "official_wfs",
-          "detail": "Avalik kataster WFS; kuvatakse katastritunnus ja omandivorm, mitte eraomaniku nime"
-        },
-        {
-          "id": "metsaregister",
-          "name": "Metsaregistri avalik päring",
-          "type": "official_rest",
-          "detail": "register.metsad.ee/portaal/api/rest/eraldis/puu ja teatis/puu"
-        },
-        {
-          "id": "eelis",
-          "name": "EELIS avalik WFS",
-          "type": "official_wfs",
-          "detail": "Keskkonnaagentuuri EELIS WFS kaitse-, Natura- ja vääriselupaiga kihid"
-        },
-        {
-          "id": "elme",
-          "name": "Looduse hüvede / ELME WFS",
-          "type": "official_wfs",
-          "detail": "Puidutooraine ja metsa puitsesse biomassi seotud süsiniku kaardikihid"
-        },
-        {
-          "id": "kaia",
-          "name": "KAIA avaandmete failiteenus",
-          "type": "future_api",
-          "detail": "Keskkonnaportaali avaandmete failide allalaadimise API; vajab eraldi andmefailide indekseerimist"
-        },
-        {
-          "id": "smi-kese",
-          "name": "SMI ja KESE metsaseire",
-          "type": "future_api",
-          "detail": "Üleriigilised seire- ja valikuuringuandmed; sobivad taustatrendiks, mitte üksiku kliki fakti tõendiks"
-        },
-        {
-          "id": "maaamet-map",
-          "name": "Maa- ja Ruumiameti aluskaart ja metsakiht",
-          "type": "official_wms",
-          "detail": "kaart.maaamet.ee/wms/alus-geo"
-        }
-      ],
-      "model": "gpt-4.1-mini"
-    },
-    {
-      "mode": "openai",
-      "status": "generated",
-      "provider": "openai-responses",
-      "question": "Mis on selle ala juures kõige olulisem?",
-      "verdict": "supported",
-      "verdictLabel": "Andmed toetavad",
-      "confidence": 65,
-      "shortAnswer": "Kõige olulisem on, et valitud alal puuduvad aktiivsed metsateatised ja raietõendid, kuid esineb kaitsekattuvus ning ELME looduse hüvede kihid, mis muudavad ala keskkonnakonteksti tundlikumaks.",
-      "explanation": "Aktiivseid ega arhiveeritud metsateatisi ei ole, mistõttu raiet ei saa kinnitada. Ala on jagatud 12 eraldiseks, mis võib viidata kirjumale metsakoosseisule. EELIS näitab 0.48 ha ulatuses VEP kaitset, ELME kihid sisaldavad mitmeid puidutooraine ja süsiniku kattuvusi, mis annavad majandusliku ja ökosüsteemse tausta.",
-      "canSay": [
-        "Aktiivseid ega mittearhiveeritud metsateatisi ei leitud.",
-        "Metsamuutuste/LiDAR tõend on ühendamata; raiet ei saa kinnitada.",
-        "Valitud alal on 1 kaitse- või piirangukattuvus (VEP nr.205608) 0.48 ha ulatuses.",
-        "ELME kihid näitavad 4 puidutooraine ja 22 süsiniku kattuvust.",
-        "Metsaregistris on 12 eraldist, mis viitab detailsele metsainventuurile."
-      ],
-      "cannotSay": [
-        "Raie on toimunud, kuna puuduvad selleks vajalikud tõendid.",
-        "EELIS kattuvus tähendab automaatselt tegevuse keelamist või lubamist.",
-        "ELME väärtused on majanduslik soovitus või tegevuse lubatavuse hinnang.",
-        "Metsamuutuste/LiDAR muutusetõend on ühendamata, seega puudub otsene tõend raietegevuse kohta.",
-        "Metsakaitseekspertiisid ja metsauuenduse detailid puuduvad."
-      ],
-      "evidence": [
-        {
-          "id": "area-base",
-          "label": "Valitud ala",
-          "detail": "Valitud katastriüksus või ala, pindala 9.68 ha.",
-          "source": "ETAK",
-          "sourceId": "maaamet-etak-forest",
-          "tone": "info"
-        },
-        {
-          "id": "cadastre-context",
-          "label": "Katastriüksus",
-          "detail": "katastriüksus 83604:001:0663 · eraomand · maatulundusmaa",
-          "source": "Kataster",
-          "sourceId": "maaamet-cadastre",
-          "tone": "success"
-        },
-        {
-          "id": "registry-stands",
-          "label": "Metsaregistri eraldised",
-          "detail": "12 eraldist; 2015: 12 eraldise inventuuriandmed.",
-          "source": "Metsaregister",
-          "sourceId": "metsaregister",
-          "tone": "success"
-        },
-        {
-          "id": "registry-active-notices",
-          "label": "Aktiivsed metsateatised",
-          "detail": "Aktiivseid metsateatisi ei leitud.",
-          "source": "Metsaregister",
-          "sourceId": "metsaregister",
-          "tone": "success"
-        },
-        {
-          "id": "registry-archived-notices",
-          "label": "Arhiveeritud metsateatised",
-          "detail": "Arhiveeritud metsateatisi ei leitud.",
-          "source": "Metsaregister",
-          "sourceId": "metsaregister",
-          "tone": "info"
-        },
-        {
-          "id": "protection-summary",
-          "label": "EELIS kattuvused",
-          "detail": "1 kaitse-, Natura-, VEP- või elupaigagruppi.",
-          "source": "EELIS",
-          "sourceId": "eelis",
-          "tone": "warning"
-        },
-        {
-          "id": "forest-change-proof",
-          "label": "Metsamuutuste/LiDAR tõend",
-          "detail": "Ühendamata; raie toimumist ei saa selle prototüübi põhjal kinnitada.",
-          "source": "Metsamuutused/LiDAR",
-          "sourceId": "forest-changes",
-          "tone": "danger"
-        },
-        {
-          "id": "elme-context",
-          "label": "ELME looduse hüved",
-          "detail": "ELME kontekst: leiti puidutooraine ja/või süsiniku hinnangud; need annavad majandusliku ja ökosüsteemse tausta, kuid ei tõenda raiet ega tegevuse lubatavust. Puidutooraine kattuvusi: 4. Süsiniku kattuvusi: 22. Muid ELME kattuvusi: 1.",
-          "source": "ELME",
-          "sourceId": "elme",
-          "tone": "info"
-        }
-      ],
-      "evidenceIds": [
-        "registry-active-notices",
-        "registry-archived-notices",
-        "forest-change-proof",
-        "protection-summary",
-        "elme-context",
-        "registry-stands",
-        "area-base",
-        "cadastre-context"
-      ],
-      "mapHints": [
-        "Vaadake kaitsekihi VEP nr.205608 kattuvust alal.",
-        "Uurige metsaregistri eraldiste jaotuskaarti detailse struktuuri mõistmiseks."
-      ],
-      "followUps": [
-        "Kas soovite teada ala metsakoosseisu või puuliikide jaotusest?",
-        "Kas huvitab kaitsekattuvuse täpsem iseloom?",
-        "Kas soovite infot majandusliku väärtuse kohta ELME andmete põhjal?"
-      ],
-      "sources": [
-        {
-          "id": "maaamet-etak-forest",
-          "name": "Maa- ja Ruumiameti ETAK metsapolügoonid",
-          "type": "official_wfs",
-          "detail": "ETAK e_305_puittaimestik_a WFS; tyyp_tekst = Mets"
-        },
-        {
-          "id": "maaamet-cadastre",
-          "name": "Maa- ja Ruumiameti katastri taust",
-          "type": "official_wfs",
-          "detail": "Avalik kataster WFS; kuvatakse katastritunnus ja omandivorm, mitte eraomaniku nime"
-        },
-        {
-          "id": "metsaregister",
-          "name": "Metsaregistri avalik päring",
-          "type": "official_rest",
-          "detail": "register.metsad.ee/portaal/api/rest/eraldis/puu ja teatis/puu"
-        },
-        {
-          "id": "eelis",
-          "name": "EELIS avalik WFS",
-          "type": "official_wfs",
-          "detail": "Keskkonnaagentuuri EELIS WFS kaitse-, Natura- ja vääriselupaiga kihid"
-        },
-        {
-          "id": "elme",
-          "name": "Looduse hüvede / ELME WFS",
-          "type": "official_wfs",
-          "detail": "Puidutooraine ja metsa puitsesse biomassi seotud süsiniku kaardikihid"
-        },
-        {
-          "id": "kaia",
-          "name": "KAIA avaandmete failiteenus",
-          "type": "future_api",
-          "detail": "Keskkonnaportaali avaandmete failide allalaadimise API; vajab eraldi andmefailide indekseerimist"
-        },
-        {
-          "id": "smi-kese",
-          "name": "SMI ja KESE metsaseire",
-          "type": "future_api",
-          "detail": "Üleriigilised seire- ja valikuuringuandmed; sobivad taustatrendiks, mitte üksiku kliki fakti tõendiks"
-        },
-        {
-          "id": "maaamet-map",
-          "name": "Maa- ja Ruumiameti aluskaart ja metsakiht",
-          "type": "official_wms",
-          "detail": "kaart.maaamet.ee/wms/alus-geo"
-        }
-      ],
-      "model": "gpt-4.1-mini"
-    },
-    {
-      "mode": "openai",
-      "status": "generated",
-      "provider": "openai-responses",
-      "question": "Mis andmed on puudu?",
+      "question": "Mis andmed on otsuse jaoks puudu?",
       "verdict": "partial",
       "verdictLabel": "Osaliselt toetatud",
       "confidence": 65,
-      "shortAnswer": "Puuduvad Metsamuutuste/LiDAR muutusetõend, KAIA avaandmete API ja SMI ning KESE metsaseire andmed.",
-      "explanation": "Andmepakis on ühendamata Metsamuutuste/LiDAR muutusetõend, mis piirab raietõendi kinnitamist. Samuti ei ole kasutusel KAIA avaandmete API ja SMI ning KESE metsaseire andmed, mis võiksid anda täiendavat infot ala seisundi ja tegevuste kohta.",
+      "shortAnswer": "Otsuse jaoks on puudu metsamuutuste/LiDAR muutusetõend, ametlik menetlusotsus ja täpne kaitsevööndi info.",
+      "explanation": "Andmepakis puudub ühendatud metsamuutuste/LiDAR tõend, mis kinnitaks tegelikku raiet või muud tegevust. Samuti ei ole olemas ametlikku Keskkonnaameti nõusolekut ega menetlusotsust. Täpne kaitsevööndi ja konkreetse kaitse-eeskirja info ei pruugi olla piisavalt detailselt esindatud, mis piirab õigusliku hinnangu andmist.",
       "canSay": [
-        "Metsamuutuste/LiDAR muutusetõend on ühendamata.",
-        "KAIA avaandmete API faile ei indekseerita valitud ala faktidena.",
-        "SMI ja KESE metsaseire andmed ei ole kasutusel üksiku ala tõendina."
+        "Valitud ala pindala on 9.68 ha ja see on eraomandis.",
+        "Metsaregistris on 12 eraldist, aktiivseid ega arhiveeritud metsateatisi ei ole.",
+        "EELIS näitab kaitse-, Natura-, VEP- või elupaigakattuvust (VEP nr.205608).",
+        "ELME andmed annavad majandusliku ja ökosüsteemse tausta, kuid ei tõenda raiet ega lubatavust."
       ],
       "cannotSay": [
-        "Raie toimumist saab kinnitada ilma muutusetõendita.",
-        "Kaitsekattuvus on otsene tegevuse keeldu või lubamist tõendav info.",
-        "Metsamuutuste/LiDAR muutusetõend ühendatud andmed.",
-        "KAIA avaandmete API andmed valitud ala kohta.",
-        "SMI ja KESE metsaseire andmed valitud ala kohta."
+        "Raie toimumist ei saa kinnitada ilma metsamuutuste/LiDAR tõendita.",
+        "Kaitsekattuvus ei ole lõplik õiguslik otsus tegevuse lubatavuse kohta.",
+        "Metsateatis üksi ei tõenda tehtud raiet.",
+        "Metsakaitseekspertiisid ja metsauuenduse detailid puuduvad, seega ei saa anda täielikku hinnangut.",
+        "Ühendatud metsamuutuste/LiDAR muutusetõend raietõendi kinnitamiseks.",
+        "Ametlik Keskkonnaameti menetlusotsus või nõusolek.",
+        "Täpne kaitsevööndi ja kaitse-eeskirja detailne info valitud ala kohta."
       ],
       "evidence": [
         {
@@ -3837,7 +3923,7 @@
         {
           "id": "registry-stands",
           "label": "Metsaregistri eraldised",
-          "detail": "12 eraldist; 2015: 12 eraldise inventuuriandmed.",
+          "detail": "12 eraldist; 2015: 12 eraldise inventuuriandmed. Puistute keskmine vanus: 46-131 a. Keskmine raievanus andmetes: 60-98 a. 8/11 eraldist on keskmise vanuse poolest keskmise raievanuseni jõudnud või üle selle.",
           "source": "Metsaregister",
           "sourceId": "metsaregister",
           "tone": "success"
@@ -3884,15 +3970,20 @@
         }
       ],
       "evidenceIds": [
-        "forest-change-proof"
+        "forest-change-proof",
+        "registry-active-notices",
+        "protection-summary",
+        "elme-context"
       ],
       "mapHints": [
-        "Vaata Metsamuutuste teemakaarti, kui WFS URL tulevikus kättesaadavaks saab.",
-        "Kontrolli EELIS kaitsekattuvusi valitud alal."
+        "Vaata kaitsekattuvusega alasid praeguses kaardivaates.",
+        "Kontrolli metsateatiste olemasolu valitud alal.",
+        "Uuri metsamuutuste/LiDAR tõendi ühendamise võimalusi."
       ],
       "followUps": [
-        "Kas on võimalik saada ühendatud Metsamuutuste/LiDAR andmeid?",
-        "Millal plaanitakse lisada KAIA ja metsaseire andmed valitud ala kohta?"
+        "Millised on kaitsevööndi piirangud valitud alal?",
+        "Kas valitud alal on kehtivaid metsateatisi?",
+        "Kuidas kaitsekattuvus mõjutab raie lubatavust?"
       ],
       "sources": [
         {

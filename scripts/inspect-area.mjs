@@ -4,10 +4,10 @@ import { join } from "node:path";
 const baseUrl = process.env.METSATARK_BASE_URL ?? "http://localhost:3000";
 const areaId = process.env.AREA_ID ?? "cadastre-83604:001:0663";
 const questions = [
+  "Mida tähendab minu jaoks, et need kaitsealad või Natura/VEP kattuvused hõlmavad minu metsaala?",
+  "Kas puude vanuse ja Metsaregistri andmete järgi oleks siin raie üldse mõeldav?",
   "Võta kokku, mis siin tõenäoliselt toimunud on",
-  "Kas siin on raie kohta tõendeid?",
-  "Mis on selle ala juures kõige olulisem?",
-  "Mis andmed on puudu?"
+  "Mis andmed on otsuse jaoks puudu?"
 ];
 
 async function requestJson(path, init) {

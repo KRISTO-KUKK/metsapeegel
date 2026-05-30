@@ -13,6 +13,7 @@ import type {
   AnalysisResult,
   AreaQuestionAnswer,
   NormalizedEvidenceItem,
+  NormalizedProtectionGroup,
   SourceStatus
 } from "@/lib/types/forestry";
 
@@ -47,6 +48,41 @@ const sourceShortLabels: Record<string, string> = {
   "smi-kese": "SMI/KESE"
 };
 
+const lawReferenceLinks = [
+  {
+    id: "lks-30",
+    label: "LKS § 30",
+    terms: ["§ 30", "§30"],
+    title: "Looduskaitseseadus § 30",
+    url: "https://www.riigiteataja.ee/akt/112072025017"
+  },
+  {
+    id: "lks-31",
+    label: "LKS § 31",
+    terms: ["§ 31", "§31"],
+    title: "Looduskaitseseadus § 31",
+    url: "https://www.riigiteataja.ee/akt/112072025017"
+  },
+  {
+    id: "ms-41",
+    label: "MS § 41",
+    terms: ["§ 41", "§41"],
+    title: "Metsaseadus § 41",
+    url: "https://www.riigiteataja.ee/akt/112052026019"
+  }
+];
+
+type InlineEvidenceToken =
+  | { kind: "text"; text: string; key: string }
+  | {
+      kind: "evidence";
+      text: string;
+      key: string;
+      evidenceId: string;
+      sourceId: string;
+      title: string;
+    };
+
 function evidenceChipLabel(item: NormalizedEvidenceItem) {
   const source = sourceShortLabels[item.sourceId] ?? item.sourceId;
   if (item.status !== "loaded") {
@@ -71,6 +107,212 @@ function evidenceChipLabel(item: NormalizedEvidenceItem) {
   return `${source}: ${item.label}`;
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function dispatchEvidenceReference(evidenceId: string, sourceId: string) {
+  window.dispatchEvent(
+    new CustomEvent("metsapeegel:evidence-link", {
+      detail: {
+        evidenceId,
+        sourceId,
+        targetId: sourceId
+      }
+    })
+  );
+  window.dispatchEvent(
+    new CustomEvent("metsapeegel:evidence-source", {
+      detail: { sourceId }
+    })
+  );
+}
+
+function dispatchEvidenceItem(item: NormalizedEvidenceItem) {
+  window.dispatchEvent(
+    new CustomEvent("metsapeegel:evidence-link", {
+      detail: {
+        evidenceId: item.id,
+        sourceId: item.sourceId,
+        targetId: item.targetId
+      }
+    })
+  );
+  window.dispatchEvent(
+    new CustomEvent("metsapeegel:evidence-source", {
+      detail: { sourceId: item.sourceId }
+    })
+  );
+}
+
+function protectionMentionPatterns(groups: NormalizedProtectionGroup[]) {
+  const patterns: Array<{ regex: RegExp; title: string }> = [
+    {
+      regex: /VEP\s*(?:nr\.?)?\s*\d+/giu,
+      title: "Ava EELIS kaitsekattuvused"
+    }
+  ];
+
+  const labels = groups.flatMap((group) => {
+    const cleanLabel = group.label.replace(/^(Kaitseala|Natura ala|Piiranguala|VEP):\s*/i, "");
+    return cleanLabel.length > 3 ? [cleanLabel] : [];
+  });
+
+  for (const label of Array.from(new Set(labels)).slice(0, 8)) {
+    patterns.push({
+      regex: new RegExp(escapeRegExp(label), "giu"),
+      title: "Ava EELIS kaitsekattuvused"
+    });
+  }
+
+  for (const code of Array.from(new Set(groups.flatMap((group) => group.codes ?? []))).slice(0, 12)) {
+    patterns.push({
+      regex: new RegExp(`(?<![A-Za-z0-9])${escapeRegExp(code)}(?![A-Za-z0-9])`, "giu"),
+      title: "Ava EELIS elupaigakattuvused"
+    });
+  }
+
+  return patterns;
+}
+
+function tokenizeEvidenceMentions(
+  text: string,
+  analysis: AnalysisResult
+): InlineEvidenceToken[] {
+  if (!text) return [];
+  const patterns = protectionMentionPatterns(
+    analysis.normalizedEvidence.protectionSummary
+  );
+  const matches: Array<{
+    start: number;
+    end: number;
+    text: string;
+    title: string;
+  }> = [];
+
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern.regex)) {
+      if (match.index === undefined || !match[0]) continue;
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        text: match[0],
+        title: pattern.title
+      });
+    }
+  }
+
+  const nonOverlapping = matches
+    .sort((a, b) => a.start - b.start || b.end - a.end)
+    .filter((match, index, all) =>
+      all.slice(0, index).every((previous) => match.start >= previous.end)
+    );
+
+  if (nonOverlapping.length === 0) {
+    return [{ kind: "text", text, key: "text-0" }];
+  }
+
+  const tokens: InlineEvidenceToken[] = [];
+  let cursor = 0;
+  nonOverlapping.forEach((match, index) => {
+    if (match.start > cursor) {
+      tokens.push({
+        kind: "text",
+        text: text.slice(cursor, match.start),
+        key: `text-${index}-${cursor}`
+      });
+    }
+    tokens.push({
+      kind: "evidence",
+      text: match.text,
+      key: `evidence-${index}-${match.start}`,
+      evidenceId: "protection-summary",
+      sourceId: "eelis",
+      title: match.title
+    });
+    cursor = match.end;
+  });
+
+  if (cursor < text.length) {
+    tokens.push({
+      kind: "text",
+      text: text.slice(cursor),
+      key: `text-tail-${cursor}`
+    });
+  }
+
+  return tokens;
+}
+
+function InlineAnswerText({
+  analysis,
+  className,
+  text
+}: {
+  analysis: AnalysisResult;
+  className?: string;
+  text: string;
+}) {
+  return (
+    <div className={clsx("whitespace-pre-line", className)}>
+      {tokenizeEvidenceMentions(text, analysis).map((token) =>
+        token.kind === "text" ? (
+          <span key={token.key}>{token.text}</span>
+        ) : (
+          <button
+            className="mx-0.5 inline-flex translate-y-[-1px] items-center rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-800 ring-1 ring-sky-200 transition hover:bg-sky-100"
+            key={token.key}
+            onClick={() => dispatchEvidenceReference(token.evidenceId, token.sourceId)}
+            title={token.title}
+            type="button"
+          >
+            {token.text}
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+function lawReferencesForAnswer(answer: AreaQuestionAnswer) {
+  const text = [
+    answer.shortAnswer,
+    answer.explanation,
+    ...answer.canSay,
+    ...answer.cannotSay
+  ].join("\n");
+
+  return lawReferenceLinks.filter((reference) =>
+    reference.terms.some((term) => text.includes(term))
+  );
+}
+
+function LawReferenceChips({ answer }: { answer: AreaQuestionAnswer }) {
+  const references = lawReferencesForAnswer(answer);
+  if (references.length === 0) return null;
+
+  return (
+    <details className="mt-2 rounded-xl bg-amber-50/60 px-3 py-2 text-xs text-amber-950 ring-1 ring-amber-100">
+      <summary className="cursor-pointer select-none font-semibold">
+        Õigusallikad
+      </summary>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {references.map((reference) => (
+          <button
+            className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-950 ring-1 ring-amber-200 transition hover:bg-amber-200"
+            key={reference.id}
+            onClick={() => window.open(reference.url, "_blank", "noopener,noreferrer")}
+            title={reference.title}
+            type="button"
+          >
+            {reference.label}
+          </button>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 function EvidenceChips({
   answer,
   analysis
@@ -86,20 +328,7 @@ function EvidenceChips({
     .filter((item): item is NormalizedEvidenceItem => Boolean(item));
 
   function selectEvidence(item: NormalizedEvidenceItem) {
-    window.dispatchEvent(
-      new CustomEvent("metsapeegel:evidence-link", {
-        detail: {
-          evidenceId: item.id,
-          sourceId: item.sourceId,
-          targetId: item.targetId
-        }
-      })
-    );
-    window.dispatchEvent(
-      new CustomEvent("metsapeegel:evidence-source", {
-        detail: { sourceId: item.sourceId }
-      })
-    );
+    dispatchEvidenceItem(item);
   }
 
   if (evidence.length === 0) {
@@ -185,18 +414,24 @@ function AnswerMessage({
         <div className="mb-2 flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--forest-800)]">
             <Bot aria-hidden className="size-3.5" />
-            {isRealAi ? "Metsatark AI" : "Metsatark"}
+            Metsatark
           </span>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
             andmed + õigusraam
           </span>
         </div>
 
-        <p className="whitespace-pre-line text-slate-900">{answer.shortAnswer}</p>
+        <InlineAnswerText
+          analysis={analysis}
+          className="text-slate-900"
+          text={answer.shortAnswer}
+        />
         {answer.explanation ? (
-          <p className="mt-1 whitespace-pre-line text-slate-700">
-            {answer.explanation}
-          </p>
+          <InlineAnswerText
+            analysis={analysis}
+            className="mt-1 text-slate-700"
+            text={answer.explanation}
+          />
         ) : null}
 
         {showStructuredDetails && answer.canSay.length > 0 ? (
@@ -220,6 +455,7 @@ function AnswerMessage({
         ) : null}
 
         <EvidenceChips analysis={analysis} answer={answer} />
+        <LawReferenceChips answer={answer} />
 
         {answer.note ? (
           <p className="mt-2 text-[11px] leading-4 text-slate-500">
@@ -262,7 +498,7 @@ export function AssistantPanel({
   }, [turns.length, areaNotice, isLoading, isAsking]);
 
   const title = useMemo(() => {
-    if (!analysis) return "Metsatark AI";
+    if (!analysis) return "Metsatark";
     return analysis.normalizedEvidence.area.title;
   }, [analysis]);
 

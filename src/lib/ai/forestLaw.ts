@@ -26,16 +26,16 @@ export const forestLawSources: ForestLawSourceRef[] = [
   {
     id: "looduskaitseseadus",
     title: "Looduskaitseseadus",
-    url: "https://www.riigiteataja.ee/akt/13342186",
+    url: "https://www.riigiteataja.ee/akt/112072025017",
     note:
-      "Kaitsealade voondid, sihtkaitsevoondi ja piiranguvoondi uldreeglid ning hoiualade kaitse."
+      "Kaitsealade vööndid: § 30 sihtkaitsevöönd, § 31 piiranguvöönd, § 32 hoiuala."
   },
   {
     id: "metsaseadus",
     title: "Metsaseadus",
     url: "https://www.riigiteataja.ee/akt/112052026019",
     note:
-      "Metsa majandamise, raiete, metsateatise ja metsaomaniku kohustuste uldraam."
+      "Metsa majandamise, raiete ja metsateatise üldraam; § 41 käsitleb metsateatist ja Keskkonnaameti kontrolli."
   },
   {
     id: "metsa_majandamise_eeskiri",
@@ -83,20 +83,20 @@ export const forestLawTopics: ForestLawTopic[] = [
     title: "Kaitseala, Natura, VEP voi elupaiga praktiline moju",
     practicalMeaning: [
       "Kaitsekattuvus tahendab, et metsa majandamist ei saa vaadata ainult tavalise tulundusmetsa reeglina.",
-      "Sihtkaitsevoondis on majandustegevus ja loodusvarade kasutamine uldreeglina keelatud, kui konkreetne kaitse-eeskiri ei luba erandit.",
-      "Piiranguvoondis on majandustegevus uldreeglina lubatud, aga kaitse-eeskiri voi looduskaitseseadus voib piirata raiet, raie aega, langi suurust, kuju, valjavedu voi muid tegevusi.",
-      "Hoiualal ja elupaikade puhul on keskne kysimus, kas tegevus kahjustab neid vaartusi, mille kaitseks ala on moodustatud.",
-      "Konkreetse tegevuse lubatavus tuleb siduda tapselt selle ala kaitse-eeskirja, voondi ja kavandatud tegevusega."
+      "Looduskaitseseaduse § 30 järgi on sihtkaitsevööndis majandustegevus ja loodusvarade kasutamine üldjuhul keelatud, kui kaitse-eeskiri ei luba erandit.",
+      "Looduskaitseseaduse § 31 järgi on piiranguvööndis majandustegevus üldjuhul lubatud kitsendustega; sama paragrahv nimetab uuendusraie ja mitmed muud tegevused keelatuks juhul, kui kaitse-eeskiri ei sätesta teisiti.",
+      "Hoiualal ja Natura/elupaikade puhul on keskne küsimus, kas kavandatav tegevus võib kahjustada kaitstava väärtuse seisundit.",
+      "Konkreetse tegevuse lubatavus tuleb siduda täpselt selle ala kaitse-eeskirja, vööndi ja kavandatud tegevusega; EELIS kattuvus üksi ei ole luba ega keeld."
     ],
     whatToCheck: [
-      "Millises voondis valitud geomeetria asub: loodusreservaat, sihtkaitsevoond, piiranguvoond, hoiuala, pysielupaik voi ainult Natura/elupaiga kattuvus.",
-      "Kas valitud andmepakis on ainult EELIS kattuvus voi ka konkreetne kaitse-eeskirja/voondi info.",
-      "Kas kavandatav tegevus on raie, ehitus, kuivendus, kulviku muutmine, soidukiga liikumine voi muu tegevus, sest piirangud erinevad."
+      "Millises vööndis valitud geomeetria asub: loodusreservaat, sihtkaitsevöönd, piiranguvöönd, hoiuala, püsielupaik või ainult Natura/elupaiga kattuvus.",
+      "Kas valitud andmepakis on ainult EELIS kattuvus või ka konkreetne kaitse-eeskirja/vööndi info.",
+      "Kas kavandatav tegevus on uuendusraie, harvendusraie, sanitaarraie, ehitus, kuivendus, maavara kaevandamine, sõidukiga liikumine või muu tegevus, sest piirangud erinevad."
     ],
     doNotOverstate: [
       "Ara ytle lihtsalt EELIS kattuvuse pohjal, et raie on keelatud voi lubatud.",
       "Ara nimeta tegevust rikkumiseks ilma menetluse, loa, teatise, voondi ja eeskirja kontrollita.",
-      "Ara vaita, et Natura voi VEP kattuvus yksi annab lopliku otsuse."
+      "Ara vaita, et Natura, VEP või elupaigakood üksi annab lõpliku otsuse."
     ],
     sourceIds: [
       "looduskaitseseadus",
@@ -155,7 +155,8 @@ export const forestLawTopics: ForestLawTopic[] = [
     practicalMeaning: [
       "Metsateatis on metsaregistri/menetluse signaal kavandatud voi registreeritud tegevuse kohta.",
       "Raie tegelik toimumine vajab lisaks registriteatisele muutusetoendit, valitoendit voi muud kontrollitavat fakti.",
-      "Metsas raiet tehes peavad raieoiguse ja seaduslikkuse aluseks olevad andmed ning dokumendid olema kontrollitavad.",
+      "Metsaseaduse § 41 järgi esitab metsaomanik Keskkonnaametile metsateatise kavandatavate raiete kohta, välja arvatud valgustusraie, ja oluliste metsakahjustuste kohta.",
+      "Metsaseaduse § 41 järgi kontrollib Keskkonnaamet nõuetekohase metsateatise alusel kavandatud raiete vastavust õigusaktide nõuetele; lubav märge ei tõenda üksi, et raie on juba toimunud.",
       "Vaiksemahuline raie voib teatud juhul olla lubatud metsateatist esitamata, aga ainult selles metsaosas oigusaktiga lubatud raie korras ja mahupiirangu sees."
     ],
     whatToCheck: [
@@ -175,7 +176,8 @@ export const forestLawTopics: ForestLawTopic[] = [
     title: "Puistu vanus, raievanus ja raiekupsus",
     practicalMeaning: [
       "Inventuuriaasta ei ole puude vanus; see naitab, millal puistut kirjeldati.",
-      "Lageraie ja turberaie vanusepoolne sobivus soltub puistu koosseisuga kaalutud esimese rinde keskmisest vanusest ning keskmisest raievanusest; puuliik, boniteet, rindelisus ja muud takseerandmed on olulised.",
+      "Metsa majandamise eeskirja § 3 järgi on lageraie vanusepoolne alus puistu koosseisuga kaalutud esimese rinde keskmise vanuse võrdlus keskmise raievanusega.",
+      "Turberaie vanusepoolne sobivus sõltub samuti puistu koosseisu ja raievanuse loogikast; puuliik, boniteet, rindelisus ja muud takseerandmed on olulised.",
       "Sanitaarraiet voib teha mis tahes vanusega puistus, kuid ainult sanitaarraie tingimustele vastavate puude kohta ja muude piirangute sees.",
       "Kui puistu keskmine vanus on raievanusest suurem, ei tahenda see yksinda, et raie on lubatud; kaitsekord, metsateatis, keskkonnanouded ja muud andmed tuleb ikkagi kontrollida."
     ],
@@ -225,6 +227,10 @@ const topicTriggers: Record<ForestLawTopicId, string[]> = {
     "vep",
     "elupaik",
     "piirang",
+    "kattuv",
+    "kattuvad",
+    "hõlmab",
+    "hõlmavad",
     "sihtkaitse",
     "piiranguvoond",
     "kuidas mojutab",

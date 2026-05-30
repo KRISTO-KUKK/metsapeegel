@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   ChevronDown,
@@ -10,8 +10,7 @@ import {
   Layers,
   Loader2,
   MapPinned,
-  ShieldAlert,
-  Sparkles
+  ShieldAlert
 } from "lucide-react";
 import clsx from "clsx";
 import type {
@@ -736,13 +735,6 @@ export function AnalysisPanel({
     };
   }, [analysis]);
 
-  const loadedSourceCount = useMemo(() => {
-    if (!analysis) return 0;
-    return analysis.normalizedEvidence.sourceStatus.filter(
-      (source) => source.status === "loaded"
-    ).length;
-  }, [analysis]);
-
   return (
     <aside className="fixed bottom-3 left-3 right-3 z-10 max-h-[42dvh] overflow-y-auto rounded-lg glass-panel p-3 shadow-panel sm:bottom-5 sm:left-auto sm:right-5 sm:top-24 sm:max-h-none sm:w-[510px] sm:p-5">
       {isLoading ? (
@@ -758,15 +750,6 @@ export function AnalysisPanel({
       ) : analysis ? (
         <div className="space-y-5">
           <header>
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full bg-[var(--sage-100)] px-2.5 py-1 text-xs font-semibold text-[var(--forest-800)]">
-                <Sparkles aria-hidden className="size-3.5" />
-                AI-tõlgendus ametlike andmete peal
-              </span>
-              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
-                {loadedSourceCount}/{analysis.normalizedEvidence.sourceStatus.length} allikat laetud
-              </span>
-            </div>
             <h2 className="text-xl font-semibold leading-7 text-slate-950">
               {analysis.normalizedEvidence.area.title}
             </h2>

@@ -662,9 +662,27 @@ describe("generateAreaQuestionAnswer", () => {
 
     const text = `${answer.shortAnswer}\n${answer.explanation}\n${answer.canSay.join(" ")}\n${answer.cannotSay.join(" ")}`;
     expect(text).toContain("kaitse-eeskirja");
+    expect(text).toContain("§ 30");
+    expect(text).toContain("§ 31");
+    expect(text).not.toContain("§ 41");
+    expect(text).not.toContain("metsateatis");
+    expect(text).not.toContain("eraldist");
     expect(text).toContain("hüvit");
     expect(text).toContain("Metsatark ei saa");
     expect(answer.evidenceIds).toContain("protection-summary");
+  });
+
+  it("adds forest notice legal framing only when protection question asks about harvest", async () => {
+    const answer = await generateAreaQuestionAnswer({
+      analysis: analysisWith({ protectedAreas: 1, notices: 2 }),
+      question: "Kuidas kaitsekattuvus mõjutab raie lubatavust?"
+    });
+
+    const text = `${answer.shortAnswer}\n${answer.explanation}\n${answer.canSay.join(" ")}\n${answer.cannotSay.join(" ")}`;
+    expect(text).toContain("§ 30");
+    expect(text).toContain("§ 31");
+    expect(text).toContain("§ 41");
+    expect(text).toContain("metsateatis");
   });
 
   it("uses stand age fields but refuses to call age a logging permit", async () => {
