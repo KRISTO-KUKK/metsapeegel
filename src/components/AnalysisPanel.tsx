@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ChevronDown,
   Database,
+  Download,
   FileText,
   Info,
   Layers,
@@ -22,6 +23,7 @@ import type {
   NormalizedSourceStatus,
   SourceStatus
 } from "@/lib/types/forestry";
+import { downloadCadastreSummary } from "@/lib/export/cadastreSummary";
 
 const sourceStatusLabel: Record<SourceStatus, string> = {
   loaded: "laetud",
@@ -750,12 +752,25 @@ export function AnalysisPanel({
       ) : analysis ? (
         <div className="space-y-5">
           <header>
-            <h2 className="text-xl font-semibold leading-7 text-slate-950">
-              {analysis.normalizedEvidence.area.title}
-            </h2>
-            <p className="mt-1 text-sm leading-5 text-slate-600">
-              {analysis.normalizedEvidence.area.subtitle}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-xl font-semibold leading-7 text-slate-950">
+                  {analysis.normalizedEvidence.area.title}
+                </h2>
+                <p className="mt-1 text-sm leading-5 text-slate-600">
+                  {analysis.normalizedEvidence.area.subtitle}
+                </p>
+              </div>
+              <button
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-950"
+                onClick={() => downloadCadastreSummary(analysis)}
+                title="Laadi alla kõik katastri andmed JSON-failina"
+                type="button"
+              >
+                <Download aria-hidden className="size-3.5" />
+                Laadi kokkuvõte
+              </button>
+            </div>
           </header>
 
           {true ? (
