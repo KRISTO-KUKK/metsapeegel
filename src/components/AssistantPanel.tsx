@@ -562,8 +562,8 @@ export function AssistantPanel({
   }
 
   return (
-    <aside className="fixed left-3 right-3 top-40 z-20 flex max-h-[27dvh] flex-col overflow-hidden rounded-lg glass-panel shadow-panel sm:bottom-5 sm:left-5 sm:right-auto sm:top-24 sm:z-10 sm:max-h-none sm:w-[420px]">
-      <div className="shrink-0 border-b border-white/70 px-4 py-3">
+    <aside className="assistant-panel fixed left-3 right-3 top-40 z-20 flex max-h-[27dvh] flex-col overflow-hidden rounded-lg shadow-panel sm:bottom-5 sm:left-5 sm:right-auto sm:top-24 sm:z-10 sm:max-h-none sm:w-[420px]">
+      <div className="shrink-0 border-b border-white/50 px-4 py-3">
         <div className="flex items-center gap-2">
           <Bot aria-hidden className="size-4 text-[var(--forest-700)]" />
           <h2 className="min-w-0 truncate text-sm font-semibold text-slate-950">
@@ -640,7 +640,7 @@ export function AssistantPanel({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="shrink-0 border-t border-white/70 bg-white/72 px-3 py-3 backdrop-blur">
+      <div className="shrink-0 bg-transparent px-3 py-3">
         <form className="flex items-end gap-2" onSubmit={submit}>
           <textarea
             className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm leading-5 text-slate-950 outline-none placeholder:text-slate-500 focus:border-[var(--forest-600)]"

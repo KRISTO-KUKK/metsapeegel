@@ -61,6 +61,16 @@ select {
   backdrop-filter: blur(18px);
 }
 
+.assistant-panel {
+  background-color: #f8fafc;
+  background-image: url("/assistant-panel-bg.png");
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 18px 60px rgba(6, 26, 13, 0.18);
+}
+
 .header-shell {
   background:
     radial-gradient(circle at 17% 50%, rgba(142, 255, 43, 0.16), transparent 36%),
