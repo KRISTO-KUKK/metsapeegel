@@ -10,6 +10,7 @@ import {
   NationalStatsPanel
 } from "@/components/NationalStatsPanel";
 import { SearchBar } from "@/components/SearchBar";
+import { withBasePath } from "@/lib/appBasePath";
 import type {
   AnalysisResult,
   SentinelComparisonResult,
@@ -32,7 +33,7 @@ export default function Home() {
     setSentinelComparison({ status: "idle" });
 
     try {
-      const response = await fetch(`/api/analyze/${encodeURIComponent(areaId)}`);
+      const response = await fetch(withBasePath(`/api/analyze/${encodeURIComponent(areaId)}`));
       if (!response.ok) {
         throw new Error("Analüüsi laadimine ebaõnnestus.");
       }
@@ -58,7 +59,7 @@ export default function Home() {
 
       try {
         const response = await fetch(
-          `/api/forest-at?lng=${encodeURIComponent(lng)}&lat=${encodeURIComponent(lat)}`
+          withBasePath(`/api/forest-at?lng=${encodeURIComponent(lng)}&lat=${encodeURIComponent(lat)}`)
         );
 
         if (response.status === 404) {
@@ -92,7 +93,7 @@ export default function Home() {
       setSentinelComparison({ status: "idle" });
 
       try {
-        const response = await fetch("/api/analyze-feature", {
+        const response = await fetch(withBasePath("/api/analyze-feature"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -132,7 +133,7 @@ export default function Home() {
     setSentinelComparison({ status: "loading" });
 
     try {
-      const response = await fetch("/api/sentinel-comparison", {
+      const response = await fetch(withBasePath("/api/sentinel-comparison"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -183,7 +184,7 @@ export default function Home() {
             <img
               alt="Metsatark"
               className="h-10 w-auto max-w-[220px] object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.32)] sm:h-11 sm:max-w-[255px]"
-              src="/metsatark-logo.png"
+              src={withBasePath("/metsatark-logo.png")}
             />
           </div>
           <SearchBar onSelectArea={selectArea} />

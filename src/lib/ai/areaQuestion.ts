@@ -81,6 +81,10 @@ type QuestionFocus = {
 };
 
 const defaultOpenAiModel = "gpt-4.1-mini";
+const missingAiKeyNote =
+  "AI API key puudub või ei tööta, mistõttu AI vestlusfunktsionaalsus ei ole hetkel kättesaadav. Allolev vastus on koostatud ainult ühendatud andmepaki ja reeglite põhjal.";
+const failedAiNote =
+  "AI teenus ei vastanud hetkel korrektselt, mistõttu AI vestlusfunktsionaalsus ei ole ajutiselt kättesaadav. Allolev vastus on koostatud ainult ühendatud andmepaki ja reeglite põhjal.";
 
 const verdictLabels: Record<AnswerVerdict, string> = {
   supported: "Andmed toetavad",
@@ -2330,7 +2334,14 @@ async function openAiAnswer(
   fallback: AreaQuestionAnswer
 ): Promise<AreaQuestionAnswer> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return fallback;
+  if (!apiKey?.trim()) {
+    return {
+      ...fallback,
+      status: "fallback",
+      provider: "deterministic-normalized-evidence",
+      note: missingAiKeyNote
+    };
+  }
 
   const model = process.env.OPENAI_MODEL ?? defaultOpenAiModel;
   const focus = questionFocusForAnalysis(input.analysis, input.question);
@@ -2485,6 +2496,20 @@ export async function generateAreaQuestionAnswer(
   const fallback = answerForIntent(input);
   const provider = requestedProvider();
 
+  if (
+    process.env.NODE_ENV !== "test" &&
+    provider === "template" &&
+    !process.env.OPENAI_API_KEY?.trim() &&
+    process.env.AI_PROVIDER?.toLocaleLowerCase("en") !== "template"
+  ) {
+    return {
+      ...fallback,
+      status: "fallback",
+      provider: "deterministic-normalized-evidence",
+      note: missingAiKeyNote
+    };
+  }
+
   if (provider === "template" || provider === "ollama") {
     return provider === "ollama"
       ? {
@@ -2503,7 +2528,9 @@ export async function generateAreaQuestionAnswer(
   } catch {
     return {
       ...fallback,
-      status: "fallback"
+      status: "fallback",
+      provider: "deterministic-normalized-evidence",
+      note: failedAiNote
     };
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, BarChart3, Loader2, RefreshCw } from "lucide-react";
 import clsx from "clsx";
+import { withBasePath } from "@/lib/appBasePath";
 
 type AuditRow = {
   id: string;
@@ -68,7 +69,7 @@ export default function AuditPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/audit-sample?perCounty=1&maxSamples=12");
+      const response = await fetch(withBasePath("/api/audit-sample?perCounty=1&maxSamples=12"));
       if (!response.ok) {
         throw new Error("Andmeanalüsaatori päring ebaõnnestus.");
       }
@@ -94,7 +95,7 @@ export default function AuditPage() {
         <header className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <Link
             className="inline-grid size-10 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-            href="/"
+            href={withBasePath("/")}
           >
             <ArrowLeft aria-hidden className="size-4" />
           </Link>

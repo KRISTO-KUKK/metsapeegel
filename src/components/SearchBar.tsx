@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Loader2, MapPin, Search, X } from "lucide-react";
+import { withBasePath } from "@/lib/appBasePath";
 import type { SearchResult } from "@/lib/types/forestry";
 
 type SearchResponse = {
@@ -25,7 +26,7 @@ export function SearchBar({
       setIsLoading(true);
       try {
         const response = await fetch(
-          `/api/search?q=${encodeURIComponent(query)}`,
+          withBasePath(`/api/search?q=${encodeURIComponent(query)}`),
           { signal: controller.signal }
         );
         const payload = (await response.json()) as SearchResponse;

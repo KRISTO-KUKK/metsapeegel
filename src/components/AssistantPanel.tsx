@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import clsx from "clsx";
+import { withBasePath } from "@/lib/appBasePath";
 import type {
   AnalysisResult,
   AreaQuestionAnswer,
@@ -414,9 +415,15 @@ function AnswerMessage({
             Metsatark
           </span>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">
-            andmed + õigusraam
+            {answer.note ? "reeglipõhine vastus" : "andmed + õigusraam"}
           </span>
         </div>
+
+        {answer.note ? (
+          <div className="mb-2 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950 ring-1 ring-amber-200">
+            {answer.note}
+          </div>
+        ) : null}
 
         <InlineAnswerText
           analysis={analysis}
@@ -434,11 +441,6 @@ function AnswerMessage({
         <EvidenceChips analysis={analysis} answer={answer} />
         <LawReferenceChips answer={answer} />
 
-        {answer.note ? (
-          <p className="mt-2 text-[11px] leading-4 text-slate-500">
-            {answer.note}
-          </p>
-        ) : null}
       </div>
     </article>
   );
@@ -502,7 +504,7 @@ export function AssistantPanel({
     setError(null);
 
     try {
-      const response = await fetch("/api/ask", {
+      const response = await fetch(withBasePath("/api/ask"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

@@ -31,6 +31,44 @@ npm install
 npm run dev
 ```
 
+## Coolify Deploy
+
+Recommended target: `https://metsatark.laboratoor1um.eu`
+
+Use Coolify with the GitHub repository `KRISTO-KUKK/metsapeegel` and choose Dockerfile-based deployment.
+
+Coolify settings:
+
+- Build pack: `Dockerfile`
+- Dockerfile location: `/Dockerfile`
+- Port / exposed port: `3000`
+- Domain: `metsatark.laboratoor1um.eu`
+- Health check path: `/api/health`
+
+Environment variables in Coolify:
+
+```bash
+OPENAI_MODEL=gpt-4.1-mini
+NODE_ENV=production
+PORT=3000
+```
+
+Optional AI variable:
+
+```bash
+OPENAI_API_KEY=your_real_key
+```
+
+If `OPENAI_API_KEY` is missing or the OpenAI request fails, Metsatark shows a visible notice in the chat: the AI chat is currently unavailable and the answer is generated only from the connected data package and rules.
+
+Do not set `METSATARK_BASE_PATH` or `NEXT_PUBLIC_METSATARK_BASE_PATH` for the subdomain deploy. Those are only for old subfolder deployments such as `/metsatark`.
+
+After deploy, check:
+
+```text
+https://metsatark.laboratoor1um.eu/api/health
+```
+
 ## Test
 
 ```bash

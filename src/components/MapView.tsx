@@ -11,6 +11,7 @@ import type {
   AreaMapAction,
   AreaQueryResponse
 } from "@/lib/types/forestry";
+import { withBasePath } from "@/lib/appBasePath";
 
 type Props = {
   analysis: AnalysisResult | null;
@@ -42,16 +43,16 @@ const emptyCollection: GeoCollection = {
 };
 
 const maaametBaseTile =
-  "/api/maaamet-tile?layer=pohi_mvr2&bbox={bbox-epsg-3857}";
+  withBasePath("/api/maaamet-tile?layer=pohi_mvr2&bbox={bbox-epsg-3857}");
 
 const maaametHybridTile =
-  "/api/maaamet-tile?layer=HYBRID&transparent=true&bbox={bbox-epsg-3857}";
+  withBasePath("/api/maaamet-tile?layer=HYBRID&transparent=true&bbox={bbox-epsg-3857}");
 
 const maaametForestTile =
-  "/api/maaamet-tile?layer=mets_1&transparent=true&bbox={bbox-epsg-3857}";
+  withBasePath("/api/maaamet-tile?layer=mets_1&transparent=true&bbox={bbox-epsg-3857}");
 
 const maaametForestDetailTile =
-  "/api/maaamet-tile?layer=BK_METS&transparent=true&bbox={bbox-epsg-3857}";
+  withBasePath("/api/maaamet-tile?layer=BK_METS&transparent=true&bbox={bbox-epsg-3857}");
 
 const cadastralBoundaryTile =
   "https://gsavalik.envir.ee/geoserver/kataster/wms?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=ky_kehtiv&STYLES=ky_kehtiv_tunnuseta&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}";
@@ -407,7 +408,7 @@ export function MapView({
 
         try {
           const response = await fetch(
-            `/api/forests-bbox?bbox=${encodeURIComponent(requestBbox)}&count=${count}`,
+            withBasePath(`/api/forests-bbox?bbox=${encodeURIComponent(requestBbox)}&count=${count}`),
             { signal: visibleForestAbort.signal }
           );
           if (!response.ok) {
@@ -1011,7 +1012,7 @@ export function MapView({
       setGeojsonSource(map, "query-result-points", emptyCollection);
 
       try {
-        const response = await fetch(`/api/area-query?${params.toString()}`);
+        const response = await fetch(withBasePath(`/api/area-query?${params.toString()}`));
         if (!response.ok) {
           throw new Error("Kaardifiltri päring ebaõnnestus.");
         }
