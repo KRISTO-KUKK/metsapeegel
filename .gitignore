@@ -1,5 +1,23 @@
-﻿.env*
+# Dependencies
+node_modules/
+
+# Local environment
+.env
+.env.*
 !.env.example
-node_modules
-.next
-.specstory
+
+# Build output and caches
+.next/
+out/
+coverage/
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Local scratch files
+tmp/
+.specstory/
+*.log
+npm-debug.log*
+
+# Operating system / editor
+.DS_Store

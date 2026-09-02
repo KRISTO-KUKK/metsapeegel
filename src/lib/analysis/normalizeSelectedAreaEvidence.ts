@@ -1,7 +1,6 @@
 import type {
   AnalysisStatus,
   Area,
-  EvidenceTone,
   ForestAreaEvidencePackage,
   NormalizedDataCompleteness,
   NormalizedEcosystemContext,

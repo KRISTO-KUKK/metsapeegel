@@ -13,15 +13,7 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_METSATARK_BASE_PATH: basePath ?? ""
   },
-  ...(basePath ? { basePath } : {}),
-  webpack(config) {
-    config.module.rules.push({
-      test: /\.geojson$/,
-      type: "json"
-    });
-
-    return config;
-  }
+  ...(basePath ? { basePath } : {})
 };
 
 export default nextConfig;

@@ -167,5 +167,5 @@ export const nationalForestInsights = [
   "Ühe valitud ala metsaandmed ei ütle, kas Eesti metsaga tervikuna läheb hästi või halvasti. SMI on selleks õige üldistuskiht.",
   "Kaitseinfo tõlgendamisel on metoodika tähtis: ETAK sobib kaardipõhiseks kaitsealuse metsamaa hindamiseks, SMI sobib üle-Eestiliseks statistiliseks jaotuseks.",
   "Raiemahtu ei tasu võrrelda ainult ühe aasta juurdekasvuga; Keskkonnaportaal rõhutab, et vanuseline ja maakategooriate muutus mõjutab tõlgendust.",
-  "Hackathoni demo jaoks on tugev narratiiv: Metsatark ühendab kliki tasandi tõendid Eesti üldpildiga ja ütleb, millal konkreetse ala põhjal ei tohi liiga suurt järeldust teha."
+  "Metsatark ühendab kliki tasandi tõendid Eesti üldpildiga ja ütleb, millal konkreetse ala põhjal ei tohi liiga suurt järeldust teha."
 ];

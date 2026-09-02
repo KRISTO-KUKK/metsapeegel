@@ -18,8 +18,6 @@ import clsx from "clsx";
 import type {
   AnalysisResult,
   NormalizedEvidenceItem,
-  NormalizedEvidenceTone,
-  NormalizedInterpretationBlock,
   NormalizedProtectionGroup,
   NormalizedSourceStatus,
   SentinelComparisonImage,
@@ -44,35 +42,6 @@ const sourceStatusClass: Record<SourceStatus, string> = {
   not_public: "bg-slate-100 text-slate-700 ring-slate-200",
   not_connected: "bg-slate-100 text-slate-700 ring-slate-200"
 };
-
-const toneClass: Record<NormalizedEvidenceTone, string> = {
-  positive: "border-emerald-200 bg-emerald-50/85 text-emerald-950",
-  attention: "border-amber-200 bg-amber-50/90 text-amber-950",
-  limit: "border-rose-200 bg-rose-50/90 text-rose-950",
-  neutral: "border-slate-200 bg-white/88 text-slate-900"
-};
-
-function Section({
-  title,
-  subtitle,
-  children
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-3 border-t border-slate-200 pt-4">
-      <div>
-        <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
-        {subtitle ? (
-          <p className="mt-0.5 text-xs leading-5 text-slate-500">{subtitle}</p>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 function StatusPill({ status }: { status: SourceStatus }) {
   return (
@@ -127,85 +96,6 @@ function BulletList({
         </li>
       ))}
     </ul>
-  );
-}
-
-function EvidenceCard({
-  id,
-  title,
-  icon: Icon,
-  tone,
-  highlighted,
-  children
-}: {
-  id: string;
-  title: string;
-  icon: typeof FileText;
-  tone: NormalizedEvidenceTone;
-  highlighted: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <article
-      className={clsx(
-        "scroll-mt-28 rounded-lg border px-3 py-3 transition-shadow",
-        toneClass[tone],
-        highlighted && "shadow-[0_0_0_3px_rgba(47,107,60,0.22)]"
-      )}
-      id={id}
-    >
-      <div className="mb-2 flex items-center gap-2">
-        <Icon aria-hidden className="size-4 shrink-0" />
-        <h3 className="text-sm font-semibold">{title}</h3>
-      </div>
-      {children}
-    </article>
-  );
-}
-
-function MetricPills({ block }: { block: NormalizedInterpretationBlock }) {
-  if (!block.metrics?.length) {
-    return null;
-  }
-
-  return (
-    <div className="mt-3 flex flex-wrap gap-1.5">
-      {block.metrics.slice(0, 5).map((metric) => (
-        <span
-          className="rounded-full bg-white/75 px-2 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200"
-          key={`${block.id}-${metric.label}`}
-          title={metric.label}
-        >
-          <span className="text-slate-500">{metric.label}: </span>
-          {metric.value}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function InterpretationBlockCard({
-  block,
-  id,
-  highlighted,
-  icon
-}: {
-  block: NormalizedInterpretationBlock;
-  id: string;
-  highlighted: boolean;
-  icon: typeof FileText;
-}) {
-  return (
-    <EvidenceCard
-      highlighted={highlighted}
-      icon={icon}
-      id={id}
-      title={block.title}
-      tone={block.tone}
-    >
-      <p className="text-sm leading-6 text-current">{block.summary}</p>
-      <MetricPills block={block} />
-    </EvidenceCard>
   );
 }
 
@@ -1014,196 +904,13 @@ export function AnalysisPanel({
             </div>
           </header>
 
-          {true ? (
-            <SourceBasedAnalysis
-              analysis={analysis}
-              highlightedSourceId={highlightedSourceId}
-              highlightedTargetId={highlightedTargetId}
-              onSearchSentinelComparison={onSearchSentinelComparison}
-              sentinelComparison={sentinelComparison}
-            />
-          ) : null}
-          {/*
-          <section
-            className="rounded-lg border border-[var(--forest-200)] bg-[var(--sage-50)] px-3 py-3 text-[var(--forest-950)]"
-            id="card-basic"
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <Sparkles aria-hidden className="size-4 shrink-0 text-[var(--forest-700)]" />
-              <h3 className="text-sm font-semibold">Tõlgenduse tuum</h3>
-            </div>
-            <p className="text-sm leading-6">
-              {analysis.normalizedEvidence.interpretation.primaryTakeaway}
-            </p>
-          </section>
-
-          <div className="grid gap-3">
-            <InterpretationBlockCard
-              block={analysis.normalizedEvidence.interpretation.activity}
-              highlighted={highlightedTargetId === "card-attention"}
-              icon={ShieldAlert}
-              id="card-attention"
-            />
-
-            <InterpretationBlockCard
-              block={analysis.normalizedEvidence.interpretation.standStructure}
-              highlighted={highlightedTargetId === "card-registry"}
-              icon={MapPinned}
-              id="card-registry"
-            />
-
-            <InterpretationBlockCard
-              block={analysis.normalizedEvidence.interpretation.nature}
-              highlighted={
-                highlightedTargetId === "card-protection" ||
-                highlightedTargetId === "card-ecosystem"
-              }
-              icon={Layers}
-              id="card-context"
-            />
-
-            <InterpretationBlockCard
-              block={analysis.normalizedEvidence.interpretation.dataGaps}
-              highlighted={highlightedTargetId === "card-cannot-claim"}
-              icon={AlertTriangle}
-              id="card-cannot-claim"
-            />
-          </div>
-
-          <details className="group rounded-lg border border-slate-200 bg-white/82">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-semibold text-slate-900">
-              <span>
-                Andmepaki seis: {analysis.normalizedEvidence.dataCompleteness.score}/100
-              </span>
-              <ChevronDown
-                aria-hidden
-                className="size-4 transition group-open:rotate-180"
-              />
-            </summary>
-            <div className="border-t border-slate-200 px-3 py-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">
-                    {analysis.normalizedEvidence.dataCompleteness.score}/100 ·{" "}
-                    {analysis.normalizedEvidence.dataCompleteness.label}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    {analysis.normalizedEvidence.dataCompleteness.meaning}
-                  </p>
-                </div>
-                <Database
-                  aria-hidden
-                  className="size-5 shrink-0 text-[var(--forest-700)]"
-                />
-              </div>
-              <BulletList
-                items={analysis.normalizedEvidence.dataCompleteness.reasons}
-                markerClassName="bg-slate-500"
-              />
-            </div>
-          </details>
-
-          <details className="group rounded-lg border border-slate-200 bg-white/82">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-semibold text-slate-900">
-              <span>Kasutatud andmed ja ühendamata allikad</span>
-              <ChevronDown
-                aria-hidden
-                className="size-4 transition group-open:rotate-180"
-              />
-            </summary>
-            <div className="space-y-2 border-t border-slate-200 p-3">
-              <p className="text-xs leading-5 text-slate-600">
-                Üks rida allika kohta. Ühendamata allikat ei kasutata
-                faktitõendina, aga link on alles, kui sellest võiks järgmises
-                iteratsioonis kasu olla.
-              </p>
-              {analysis.normalizedEvidence.sourceStatus.map((source) => (
-                <UsedDataRow
-                  highlighted={highlightedSourceId === source.id}
-                  key={source.id}
-                  source={source}
-                />
-              ))}
-            </div>
-          </details>
-
-          <Section title="Kaitsekattuvused">
-            <ProtectionGroups
-              groups={analysis.normalizedEvidence.protectionSummary}
-            />
-          </Section>
-
-          <details className="group rounded-lg border border-slate-200 bg-white/82">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-sm font-semibold text-slate-900">
-              Metsaregistri detailid
-              <ChevronDown
-                aria-hidden
-                className="size-4 transition group-open:rotate-180"
-              />
-            </summary>
-            <div className="space-y-2 border-t border-slate-200 px-3 py-3" id="card-registry-detail">
-              <FactRow
-                label="Eraldised"
-                value={`${analysis.normalizedEvidence.registrySummary.standsCount} tk`}
-              />
-              <FactRow
-                label="Teatised"
-                tooltip="Metsateatis on ametlik teade kavandatud raie või metsakahjustuse kohta; see ei tõenda üksinda, et töö on toimunud."
-                value={`${analysis.normalizedEvidence.registrySummary.activeNoticesCount} aktiivset, ${analysis.normalizedEvidence.registrySummary.archivedNoticesCount} arhiveeritud`}
-              />
-              <FactRow
-                label="Puuliigid"
-                value={
-                  analysis.normalizedEvidence.registrySummary.dominantSpecies.length
-                    ? analysis.normalizedEvidence.registrySummary.dominantSpecies.join(", ")
-                    : "andmetes ei leitud"
-                }
-              />
-              <FactRow
-                label="Arenguklass"
-                value={
-                  analysis.normalizedEvidence.registrySummary.developmentClasses.length
-                    ? analysis.normalizedEvidence.registrySummary.developmentClasses.join(", ")
-                    : "andmetes ei leitud"
-                }
-              />
-              <FactRow
-                label="Inventuur"
-                value={analysis.normalizedEvidence.registrySummary.inventorySummary}
-              />
-              {analysis.normalizedEvidence.registrySummary.veryOldInventory ? (
-                <p className="rounded-md bg-amber-50 px-2 py-2 text-xs font-medium leading-5 text-amber-900 ring-1 ring-amber-200">
-                  Andmed võivad olla väga vanad. See mõjutab seda, kui julgelt
-                  saab praegust metsaseisu kirjeldada.
-                </p>
-              ) : null}
-            </div>
-          </details>
-
-          <Section title="Looduse hüved">
-            <EcosystemDetails analysis={analysis} />
-          </Section>
-
-          {analysis.normalizedEvidence.timeline.length > 0 ? (
-            <Section title="Ajajoon">
-              <div className="space-y-2">
-                {analysis.normalizedEvidence.timeline.map((item) => (
-                  <div
-                    className="rounded-lg border border-slate-200 bg-white/88 px-3 py-2 text-sm leading-5 text-slate-700"
-                    key={item.id}
-                  >
-                    <div className="font-semibold text-slate-950">
-                      {item.year ? `${item.year}: ` : ""}
-                      {item.label}
-                    </div>
-                    <div>{item.detail}</div>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          ) : null}
-
-          */}
+          <SourceBasedAnalysis
+            analysis={analysis}
+            highlightedSourceId={highlightedSourceId}
+            highlightedTargetId={highlightedTargetId}
+            onSearchSentinelComparison={onSearchSentinelComparison}
+            sentinelComparison={sentinelComparison}
+          />
 
           <TechnicalDetails analysis={analysis} />
         </div>

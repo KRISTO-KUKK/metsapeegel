@@ -2,6 +2,9 @@
   "name": "metsapeegel",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,7 +20,7 @@
     "jpeg-js": "^0.4.4",
     "lucide-react": "^0.468.0",
     "maplibre-gl": "^4.7.1",
-    "next": "^15.1.6",
+    "next": "^16.3.4",
     "proj4": "^2.20.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -33,6 +36,6 @@
     "shpjs": "^6.2.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.11"
   }
 }

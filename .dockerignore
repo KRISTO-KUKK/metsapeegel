@@ -2,10 +2,12 @@
 .next
 node_modules
 npm-debug.log*
+*.log
 .env
 .env.*
 !.env.example
 tmp
 .specstory
-Dockerfile
-docker-compose*.yml
+coverage
+tsconfig.tsbuildinfo
+*.tsbuildinfo

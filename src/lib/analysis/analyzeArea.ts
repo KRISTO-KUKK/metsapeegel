@@ -41,8 +41,7 @@ import type {
   PrioritizedInsight,
   ProtectedArea,
   SourceDiagnostic,
-  SpatialOverlap,
-  TimelineEvent
+  SpatialOverlap
 } from "@/lib/types/forestry";
 
 const noticeLabels: Record<ForestNotice["type"], string> = {
@@ -427,63 +426,6 @@ function buildWhatHappened(
   }
 
   return rows;
-}
-
-function buildTimeline({
-  stands,
-  notices,
-  changes,
-  protectedAreas
-}: {
-  stands: ForestStand[];
-  notices: ForestNotice[];
-  changes: ForestChange[];
-  protectedAreas: ProtectedArea[];
-}): TimelineEvent[] {
-  const events: TimelineEvent[] = [];
-
-  for (const stand of stands) {
-    events.push({
-      id: `${stand.id}-inventory`,
-      year: stand.inventoryYear,
-      label: "Metsainventuur",
-      detail: stand.inventoryYear
-        ? `Metsaeraldis kirjeldati aastal ${stand.inventoryYear}.`
-        : "Inventuuriaasta puudub.",
-      tone: isInventoryOutdated(stand) ? "warning" : "success"
-    });
-  }
-
-  for (const notice of notices) {
-    events.push({
-      id: `${notice.id}-submitted`,
-      year: notice.submittedYear ?? notice.validUntilYear,
-      label: "Metsateatis",
-      detail: `Registris on ${notice.workTypeLabel ?? noticeLabels[notice.type]} tüüpi teatis.`,
-      tone: "success"
-    });
-  }
-
-  for (const change of changes) {
-    events.push({
-      id: `${change.id}-detected`,
-      year: change.detectedToYear,
-      label: "Kaugseire signaal",
-      detail: `${changeLabels[change.changeType]} tuvastati perioodil ${change.detectedFromYear ?? "?"}-${change.detectedToYear ?? "?"}.`,
-      tone: notices.length > 0 ? "success" : "warning"
-    });
-  }
-
-  if (protectedAreas.length > 0) {
-    events.push({
-      id: "protected-context",
-      label: "Kaitsekontekst",
-      detail: "Kaitse- või piiranguandmed kattuvad valitud alaga.",
-      tone: "info"
-    });
-  }
-
-  return events.sort((a, b) => (a.year ?? 9999) - (b.year ?? 9999));
 }
 
 function buildSources(): DataSourceRef[] {

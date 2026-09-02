@@ -5,7 +5,7 @@ import { bbox, pointOnFeature } from "@turf/turf";
 import { LoaderCircle, LocateFixed, RotateCcw } from "lucide-react";
 import maplibregl, { GeoJSONSource } from "maplibre-gl";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
-import countiesGeojson from "@/data/official/counties.geojson";
+import countiesGeojson from "@/data/official/counties.json";
 import type {
   AnalysisResult,
   AreaMapAction,
