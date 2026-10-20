@@ -4,10 +4,6 @@ MetsaTark is a forestry data prototype built during a hackathon organised by Kes
 
 The goal is to make fragmented public data easier to understand. The app combines map selection, official geospatial layers, deterministic analysis rules and an optional AI wording layer. When the available data is incomplete, the interface is designed to say that clearly instead of inventing certainty.
 
-[Screenshot: map view]
-[Screenshot: selected forest area analysis]
-[Screenshot: area question answering panel]
-
 ## Main Features
 
 - Interactive map for selecting forest areas in Estonia.
